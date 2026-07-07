@@ -8,10 +8,11 @@ export async function onRequest(context) {
     try {
       const { messages } = await request.json();
       const GEMINI_API_KEY = env.GEMINI_API_KEY;
-  
+
       if (!GEMINI_API_KEY) {
-        return Response.json({ reply: "ה-Key לא מוגדר ב-Cloudflare" }, { status: 500 });
+        return Response.json({ reply: "Key לא מוגדר" });
       }
+
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
@@ -21,31 +22,19 @@ export async function onRequest(context) {
             contents: messages.map(m => ({
               role: m.role === "system" ? "user" : m.role,
               parts: [{ text: m.content }]
-            })),
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 800
-            }
+            }))
           })
         }
       );
 
-      if (!geminiRes.ok) {
-        const errorText = await geminiRes.text();
-        console.error("Gemini Error:", errorText);
-        return Response.json({ reply: `שגיאה מ-Gemini: ${geminiRes.status}` }, { status: 500 });
-      }
-
       const data = await geminiRes.json();
-      
-      const reply = data.candidates?.[0]?.content?.parts?.[0]?.text 
-        || data.error?.message 
-        || "לא קיבלתי תשובה";
 
-      return Response.json({ reply });
+      return Response.json({ 
+        reply: data.candidates?.[0]?.content?.parts?.[0]?.text || "לא קיבלתי תשובה",
+        full_response: data   // ← זה מה שחשוב
+      });
 
     } catch (error) {
-      console.error("Server Error:", error);
-      return Response.json({ reply: "שגיאה בשרת - בדוק את ה-API Key" }, { status: 500 });
+      return Response.json({ reply: "שגיאה: " + error.message });
     }
   }
