@@ -26,8 +26,11 @@ export async function onRequest(context) {
           })
         }
       );
-  
+
+      console.log("Gemini Status:", geminiRes.status);
       const data = await geminiRes.json();
+      console.log("Gemini Response:", data);
+
       const reply = data.candidates?.[0]?.content?.parts?.[0]?.text || "לא קיבלתי תשובה";
   
       return Response.json({ reply });
