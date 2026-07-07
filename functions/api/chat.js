@@ -12,7 +12,6 @@ export async function onRequest(context) {
       if (!GEMINI_API_KEY) {
         return Response.json({ reply: "ה-Key לא מוגדר ב-Cloudflare" }, { status: 500 });
       }
-
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
         {
@@ -22,7 +21,11 @@ export async function onRequest(context) {
             contents: messages.map(m => ({
               role: m.role === "system" ? "user" : m.role,
               parts: [{ text: m.content }]
-            }))
+            })),
+            generationConfig: {
+              temperature: 0.7,
+              maxOutputTokens: 800
+            }
           })
         }
       );
