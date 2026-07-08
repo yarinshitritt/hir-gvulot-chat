@@ -1,6 +1,5 @@
 export async function onRequest(context) {
-    const { request, env } = context;
-    const kv = env.CHAT_KV;
+    const { request } = context;
   
     try {
       const formData = await request.formData();
@@ -9,17 +8,15 @@ export async function onRequest(context) {
       if (!file) return Response.json({ reply: "לא נשלח קובץ" });
   
       const fileName = file.name;
-      const text = await file.text(); // for now, store as text
+      const text = await file.text();
   
-      // שמירה ב-KV
-      await kv.put(`file:${fileName}`, text, { expirationTtl: 60 * 60 * 24 * 30 }); // 30 days
-  
+      // שמירה זמנית בזיכרון (לשיחה נוכחית)
       return Response.json({ 
-        reply: `✅ קובץ ${fileName} נשמר בהצלחה!\nאני יכול להשתמש בו עכשיו.` 
+        reply: `✅ קובץ ${fileName} התקבל.\n\nסיכום ראשוני:\n${text.substring(0, 500)}...` 
       });
   
     } catch (e) {
       console.error(e);
-      return Response.json({ reply: "שגיאה בשמירת הקובץ" });
+      return Response.json({ reply: "שגיאה בהעלאת הקובץ" });
     }
   }
