@@ -1,5 +1,6 @@
 export async function onRequest(context) {
-    const { request } = context;
+    const { request, env } = context;
+    const kv = env.CHAT_KV;
   
     try {
       const formData = await request.formData();
@@ -8,15 +9,17 @@ export async function onRequest(context) {
       if (!file) return Response.json({ reply: "לא נשלח קובץ" });
   
       const fileName = file.name;
-      const size = (file.size / 1024).toFixed(1);
-      
-      // ניתוח בסיסי (לשלב מאוחר יותר נשתמש ב-openpyxl)
+      const text = await file.text();
+  
+      // שמירה ב-KV
+      await kv.put(`file:${Date.now()}:${fileName}`, text, { expirationTtl: 60 * 60 * 24 * 7 });
+  
       return Response.json({ 
-        reply: `✅ קובץ ${fileName} התקבל (${size} KB).\n\nהתחלתי לנתח...\n\nמה תרצה לדעת?\n- ממוצע כללי\n- חניכים עם ציון נמוך\n- סיכום לפי מחלקה` 
+        reply: `✅ קובץ ${fileName} נשמר ב-KV.\n\nעכשיו תוכל לשאול עליו.` 
       });
   
     } catch (e) {
       console.error(e);
-      return Response.json({ reply: "שגיאה בהעלאה" });
+      return Response.json({ reply: "שגיאה בשמירה" });
     }
   }
