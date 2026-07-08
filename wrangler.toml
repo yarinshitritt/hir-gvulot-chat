@@ -1,6 +1,5 @@
 name = "hir-gvulot-chat"
 compatibility_date = "2026-07-01"
-pages_build_output_dir = "."
 
 kv_namespaces = [
   { binding = "CHAT_KV", id = "6c788e85f593492d8eb7e400ce4e7463" }
