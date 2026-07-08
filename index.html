@@ -62,9 +62,11 @@
 <div id="chat"></div>
 
 <div id="inputBox">
-  <input id="input" placeholder="כתוב הודעה..." />
-  <button onclick="send()">שלח</button>
-</div>
+    <input id="input" placeholder="כתוב הודעה..." style="flex: 1;" />
+    <input type="file" id="fileUpload" accept=".xlsx,.xls" style="display: none;" />
+    <button onclick="document.getElementById('fileUpload').click()">📎</button>
+    <button onclick="send()">שלח</button>
+  </div>
 
 <script>
 
