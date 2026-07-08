@@ -10,12 +10,13 @@ export async function onRequest(context) {
       const fileName = file.name;
       const size = (file.size / 1024).toFixed(1);
       
+      // ניתוח בסיסי (לשלב מאוחר יותר נשתמש ב-openpyxl)
       return Response.json({ 
-        reply: `✅ קובץ ${fileName} התקבל (${size} KB).\n\nאני יכול לנתח אותו. מה תרצה לדעת עליו?` 
+        reply: `✅ קובץ ${fileName} התקבל (${size} KB).\n\nהתחלתי לנתח...\n\nמה תרצה לדעת?\n- ממוצע כללי\n- חניכים עם ציון נמוך\n- סיכום לפי מחלקה` 
       });
   
     } catch (e) {
-      console.error("Upload Error:", e);
-      return Response.json({ reply: "שגיאה בהעלאה - נסה שוב" });
+      console.error(e);
+      return Response.json({ reply: "שגיאה בהעלאה" });
     }
   }
