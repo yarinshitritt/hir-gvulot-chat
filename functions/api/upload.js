@@ -8,11 +8,12 @@ export async function onRequest(context) {
       if (!file) return Response.json({ reply: "לא נשלח קובץ" });
   
       const fileName = file.name;
-      const text = await file.text();
-  
-      // שמירה זמנית בזיכרון (לשיחה נוכחית)
+      
+      // קריאה כ-ArrayBuffer כדי לטפל ב-xlsx
+      const arrayBuffer = await file.arrayBuffer();
+      
       return Response.json({ 
-        reply: `✅ קובץ ${fileName} התקבל.\n\nסיכום ראשוני:\n${text.substring(0, 500)}...` 
+        reply: `✅ קובץ ${fileName} התקבל (${(arrayBuffer.byteLength / 1024).toFixed(1)} KB).\n\nאני יכול לנתח אותו עכשיו. מה תרצה לדעת? (ממוצעים, חניכים נכשלים וכו')` 
       });
   
     } catch (e) {
