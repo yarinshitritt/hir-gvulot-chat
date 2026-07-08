@@ -64,7 +64,7 @@
 <div id="inputBox">
     <input id="input" placeholder="כתוב הודעה..." style="flex: 1;" />
     <input type="file" id="fileUpload" accept=".xlsx,.xls" style="display: none;" />
-    <button onclick="document.getElementById('fileUpload').click()">📎</button>
+    <button onclick="document.getElementById('fileUpload').click()">📎 העלה אקסל</button>
     <button onclick="send()">שלח</button>
   </div>
 
@@ -310,6 +310,28 @@ function addMessage(text, type) {
 document.getElementById("input").addEventListener("keydown", function (e) {
   if (e.key === "Enter") {
     send();
+  }
+});
+// העלאת קובץ
+document.getElementById('fileUpload').addEventListener('change', async (e) => {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  addMessage(`מעלה קובץ: ${file.name}...`, "user");
+
+  const formData = new FormData();
+  formData.append('file', file);
+
+  try {
+    const res = await fetch("/api/upload", {
+      method: "POST",
+      body: formData
+    });
+
+    const data = await res.json();
+    addMessage(data.reply, "bot");
+  } catch (err) {
+    addMessage("שגיאה בהעלאה", "bot");
   }
 });
 </script>
