@@ -57,7 +57,7 @@ export async function onRequest(context) {
 
       // 4. שליחה ל-Gemini (שמתי לך פה את המודל שהגדרת - flash-lite)
       const geminiRes = await fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`,
+        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
