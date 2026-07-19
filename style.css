@@ -1,0 +1,108 @@
+@font-face {
+    font-family: "Rubik";
+    src: url("sources/fonts/Rubik-VariableFont_wght.ttf");
+  }
+  
+  body {
+      direction: rtl;
+      background-image: url(sources/images/background.png);
+      margin: 0;
+      color: black;
+      flex-direction: column;
+      /* height: 100vh; */
+      overflow: hidden;
+      display: flex;
+      justify-content: space-between;
+      font-family: "Rubik";
+  }
+  
+  /* הכותרת של הבא"ח */
+  header {
+      display: flex;
+      flex-direction: row;
+      gap: 0.6vw;
+      align-items: center;
+      background-color: rgb(224, 185, 116);
+      height: 10vh;
+  }
+  
+  .baah-icon {
+      width: fit-content;
+      height: 8vh;
+  }
+  
+  .baah-title {
+      font-size: 3.4vmax;
+  }
+  
+  
+  /* הצ'אט עצמו */
+  #chat {
+      /* flex: 1; */
+      overflow-y: auto;
+      /* padding: 1vh; */
+      height: 80vh;
+  }
+  
+  
+  /* הודעות */
+  .msg {
+      display: flex;
+      margin: 3vw 1vw;
+      padding: 1.5vh;
+      max-width: 70%;
+      /* white-space: pre-wrap; */
+      width: fit-content;
+      flex-wrap: wrap;
+      /* width: fit-content; */
+  }
+  
+  .user {
+      background: rgb(181, 137, 60);
+      color: white;
+      align-self: flex-end;
+      border-radius: 2.5vw;
+  }
+  
+  .bot {
+      /* background: #333; */
+      align-self: flex-start;
+  }
+  
+  
+  /* החלק של השליחת שאלות */
+  #inputBox {
+      position: absolute;
+      bottom: 4vh;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 2vw;
+      justify-content: center;
+      align-items: center;
+  }
+  
+  input {
+      flex: 1;
+      font-size: 2vmax;
+      background-color: rgb(224, 185, 116);
+      border-radius: 3vh;
+      border: none;
+      font-family: "Rubik";
+      width: 80vw;
+      height: 6vh;
+  }
+  
+  button {
+      padding: 3vh;
+      margin: 1vh;
+      background-color: rgb(224, 185, 116);
+      border-radius: 3vh;
+      border: none;
+      cursor: pointer;
+      font-family: "Rubik";
+      height: 6vh;
+      display: flex;
+      justify-content: center;
+      flex-wrap: wrap;
+      align-content: center;
+  }
