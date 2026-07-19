@@ -1,116 +1,132 @@
 @font-face {
     font-family: "Rubik";
     src: url("sources/fonts/Rubik-VariableFont_wght.ttf");
-  }
-  
-  body {
-      direction: rtl;
-      background-image: url(sources/images/background.png);
-      margin: 0;
-      color: black;
-      flex-direction: column;
-      /* height: 100vh; */
-      overflow: hidden;
-      display: flex;
-      justify-content: space-between;
-      font-family: "Rubik";
-  }
-  
-  /* הכותרת של הבא"ח */
-  header {
-      display: flex;
-      flex-direction: row;
-      gap: 0.6vw;
-      align-items: center;
-      background-color: rgb(224, 185, 116);
-      height: 10vh;
-  }
-  
-  .baah-icon {
-      width: fit-content;
-      height: 8vh;
-  }
-  
-  .baah-title {
-      font-size: 3.4vmax;
-  }
-  
-  
-  /* הצ'אט עצמו */
-  #chat {
-      /* flex: 1; */
-      overflow-y: auto;
-      /* padding: 1vh; */
-      height: 80vh;
-  }
-  
-  
-  /* הודעות */
-  .msg {
-      display: flex;
-      margin: 3vw 1vw;
-      padding: 1.5vh;
-      max-width: 70%;
-      /* white-space: pre-wrap; */
-      width: fit-content;
-      flex-wrap: wrap;
-      /* width: fit-content; */
-  }
-  
-  .user {
-      background: rgb(244, 185, 84);
-      color: white;
-      align-self: flex-end;
-      border-radius: 2.5vw;
-  }
-  
-  .bot {
-      /* background: #333; */
-      align-self: flex-start;
-  }
-  
-  
-  /* החלק של השליחת שאלות */
-  #inputBox {
-      position: absolute;
-      bottom: 4vh;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 2vw;
-      justify-content: center;
-      align-items: center;
-  }
-  
-  input {
-      flex: 1;
-      font-size: 2vmax;
-      background-color: rgb(224, 185, 116);
-      border-radius: 3vh;
-      border: none;
-      font-family: "Rubik";
-      width: 80vw;
-      height: 6vh;
-  }
-  
-  button {
-      padding: 3vh;
-      margin: 1vh;
-      background-color: rgb(224, 185, 116);
-      border-radius: 3vh;
-      border: none;
-      cursor: pointer;
-      font-family: "Rubik";
-      height: 6vh;
-      display: flex;
-      justify-content: center;
-      flex-wrap: wrap;
-      align-content: center;
-  }
-  .bot {
-    background: rgb(216, 146, 17);  /* כהה יותר מה-user שהוא rgb(181, 137, 60) */
+}
+
+* {
+    box-sizing: border-box;
+}
+
+body {
+    direction: rtl;
+    background-image: url(sources/images/background.png);
+    background-size: cover;
+    margin: 0;
+    color: black;
+    display: flex;
+    flex-direction: column;
+    height: 100dvh; /* dvh עובד טוב יותר במובייל */
+    overflow: hidden;
+    font-family: "Rubik";
+}
+
+/* כותרת */
+header {
+    display: flex;
+    flex-direction: row;
+    gap: 8px;
+    align-items: center;
+    background-color: rgb(224, 185, 116);
+    height: 10dvh;
+    padding: 0 12px;
+    flex-shrink: 0;
+}
+
+.baah-icon {
+    height: 7dvh;
+    width: auto;
+}
+
+.baah-title {
+    font-size: clamp(16px, 4vw, 28px);
+}
+
+/* צ'אט */
+#chat {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 4px;
+    display: flex;
+    flex-direction: column;
+    /* מניעת חיתוך על iOS */
+    -webkit-overflow-scrolling: touch;
+}
+
+/* הודעות */
+.msg {
+    margin: 6px 8px;
+    padding: 10px 14px;
+    max-width: 80%;
+    width: fit-content;
+    word-break: break-word;
+    line-height: 1.5;
+    font-size: clamp(14px, 3.5vw, 17px);
+}
+
+.user {
+    background: rgb(244, 185, 84);
+    color: white;
+    align-self: flex-end;
+    border-radius: 18px 18px 4px 18px;
+}
+
+.bot {
+    background: rgb(216, 146, 17);
     color: white;
     align-self: flex-start;
-    border-radius: 2.5vw;
-    padding: 1.5vh;
-    margin: 3vw 1vw;
+    border-radius: 18px 18px 18px 4px;
+}
+
+/* תיבת קלט */
+#inputBox {
+    display: flex;
+    flex-direction: row;
+    gap: 6px;
+    padding: 8px 10px;
+    padding-bottom: max(8px, env(safe-area-inset-bottom)); /* iPhone notch */
+    background-color: rgba(224, 185, 116, 0.3);
+    border-top: 1px solid rgba(224, 185, 116, 0.5);
+    flex-shrink: 0;
+    align-items: center;
+}
+
+input[type="text"],
+input:not([type="file"]) {
+    flex: 1;
+    font-size: clamp(14px, 3.5vw, 17px);
+    background-color: rgb(224, 185, 116);
+    border-radius: 24px;
+    border: none;
+    font-family: "Rubik";
+    padding: 10px 16px;
+    height: auto;
+    min-height: 44px; /* גודל מינימלי לנגיעה במובייל */
+    outline: none;
+}
+
+button {
+    background-color: rgb(224, 185, 116);
+    border-radius: 24px;
+    border: none;
+    cursor: pointer;
+    font-family: "Rubik";
+    font-size: clamp(13px, 3vw, 16px);
+    min-height: 44px;
+    min-width: 44px;
+    padding: 8px 14px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+button:active {
+    opacity: 0.8;
+}
+
+/* מסכים קטנים במיוחד */
+@media (max-width: 360px) {
+    .msg {
+        max-width: 90%;
+    }
 }
