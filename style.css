@@ -58,7 +58,7 @@
   }
   
   .user {
-      background: rgb(181, 137, 60);
+      background: rgb(244, 185, 84);
       color: white;
       align-self: flex-end;
       border-radius: 2.5vw;
@@ -106,3 +106,11 @@
       flex-wrap: wrap;
       align-content: center;
   }
+  .bot {
+    background: rgb(216, 146, 17);  /* כהה יותר מה-user שהוא rgb(181, 137, 60) */
+    color: white;
+    align-self: flex-start;
+    border-radius: 2.5vw;
+    padding: 1.5vh;
+    margin: 3vw 1vw;
+}
