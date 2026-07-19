@@ -7,6 +7,10 @@
     box-sizing: border-box;
 }
 
+html {
+    font-size: 16px; /* בסיס ל-rem */
+}
+
 body {
     direction: rtl;
     background-image: url(sources/images/background.png);
@@ -15,118 +19,131 @@ body {
     color: black;
     display: flex;
     flex-direction: column;
-    height: 100dvh; /* dvh עובד טוב יותר במובייל */
+    height: 100dvh;
     overflow: hidden;
     font-family: "Rubik";
+    font-size: 1rem;
 }
 
 /* כותרת */
 header {
     display: flex;
     flex-direction: row;
-    gap: 8px;
+    gap: 0.5rem;
     align-items: center;
     background-color: rgb(224, 185, 116);
     height: 10dvh;
-    padding: 0 12px;
+    min-height: 3.5rem;
+    padding: 0 0.75rem;
     flex-shrink: 0;
 }
 
 .baah-icon {
     height: 7dvh;
+    min-height: 2.5rem;
     width: auto;
 }
 
 .baah-title {
-    font-size: clamp(16px, 4vw, 28px);
+    font-size: clamp(1rem, 4vw, 1.75rem);
 }
 
 /* צ'אט */
 #chat {
     flex: 1;
     overflow-y: auto;
-    padding: 8px 4px;
+    overflow-x: hidden;
+    padding: 0.5rem 0.25rem;
     display: flex;
     flex-direction: column;
-    /* מניעת חיתוך על iOS */
     -webkit-overflow-scrolling: touch;
+    width: 100%;
 }
 
 /* הודעות */
 .msg {
-    margin: 6px 8px;
-    padding: 10px 14px;
+    margin: 0.375rem 0.5rem;
+    padding: 0.625em 0.875em;
     max-width: 80%;
     width: fit-content;
     word-break: break-word;
     line-height: 1.5;
-    font-size: clamp(14px, 3.5vw, 17px);
+    font-size: clamp(0.875rem, 3.5vw, 1.0625rem);
+    border-radius: 1.125rem;
 }
 
 .user {
     background: rgb(244, 185, 84);
     color: white;
     align-self: flex-end;
-    border-radius: 18px 18px 4px 18px;
+    border-bottom-left-radius: 0.25rem;
 }
 
 .bot {
     background: rgb(216, 146, 17);
     color: white;
     align-self: flex-start;
-    border-radius: 18px 18px 18px 4px;
+    border-bottom-right-radius: 0.25rem;
 }
 
 /* תיבת קלט */
 #inputBox {
     display: flex;
     flex-direction: row;
-    gap: 6px;
-    padding: 8px 10px;
-    padding-bottom: max(8px, env(safe-area-inset-bottom)); /* iPhone notch */
+    flex-wrap: nowrap;
+    gap: 0.375rem;
+    padding: 0.5rem 0.625rem;
+    padding-bottom: max(0.5rem, env(safe-area-inset-bottom));
     background-color: rgba(224, 185, 116, 0.3);
-    border-top: 1px solid rgba(224, 185, 116, 0.5);
+    border-top: 0.0625rem solid rgba(224, 185, 116, 0.5);
     flex-shrink: 0;
     align-items: center;
+    width: 100%;
 }
 
 input[type="text"],
 input:not([type="file"]) {
     flex: 1;
-    font-size: clamp(14px, 3.5vw, 17px);
+    min-width: 0; /* חשוב! מונע גלישה בflex */
+    font-size: clamp(0.875rem, 3.5vw, 1.0625rem);
     background-color: rgb(224, 185, 116);
-    border-radius: 24px;
+    border-radius: 1.5rem;
     border: none;
     font-family: "Rubik";
-    padding: 10px 16px;
+    padding: 0.625em 1em;
     height: auto;
-    min-height: 44px; /* גודל מינימלי לנגיעה במובייל */
+    min-height: 2.75rem;
     outline: none;
 }
 
 button {
     background-color: rgb(224, 185, 116);
-    border-radius: 24px;
+    border-radius: 1.5rem;
     border: none;
     cursor: pointer;
     font-family: "Rubik";
-    font-size: clamp(13px, 3vw, 16px);
-    min-height: 44px;
-    min-width: 44px;
-    padding: 8px 14px;
+    font-size: clamp(0.8125rem, 3vw, 1rem);
+    min-height: 2.75rem;
+    min-width: 2.75rem;
+    padding: 0.5em 0.875em;
     display: flex;
     justify-content: center;
     align-items: center;
     flex-shrink: 0;
+    white-space: nowrap;
 }
 
 button:active {
     opacity: 0.8;
 }
 
-/* מסכים קטנים במיוחד */
-@media (max-width: 360px) {
+@media (max-width: 22.5rem) {
     .msg {
         max-width: 90%;
+    }
+
+    button {
+        padding: 0.5em 0.5em;
+        font-size: 0.8125rem;
     }
 }
