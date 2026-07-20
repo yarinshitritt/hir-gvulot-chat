@@ -1,6 +1,7 @@
 @font-face {
     font-family: "Rubik";
-    src: url("/sources/fonts/static/Rubik-VariableFont_wght.ttf") format("truetype");}
+    src: url("sources/fonts/Rubik-VariableFont_wght.ttf") format("truetype");
+}
 
 * {
     box-sizing: border-box;
