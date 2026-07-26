@@ -9,15 +9,19 @@ export async function onRequest(context) {
     if (!file) return Response.json({ reply: "לא נשלח קובץ" });
 
     const fileName = file.name;
-    const arrayBuffer = await file.arrayBuffer();
-    const buffer = Buffer.from(arrayBuffer);
 
     // בדיקה אם זה קובץ Excel
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
       try {
         // ייבוא XLSX בצורה דינמית
         const XLSX = await import('xlsx');
-        const workbook = XLSX.read(buffer, { type: 'buffer' });
+        
+        // קריאה של הקובץ כ-ArrayBuffer ישירות (לא כטקסט!)
+        const arrayBuffer = await file.arrayBuffer();
+        const uint8Array = new Uint8Array(arrayBuffer);
+        
+        // קריאת ה-Excel מה-Uint8Array
+        const workbook = XLSX.read(uint8Array, { type: 'array' });
         
         // קריאה של כל גיליונות העבודה
         let excelContent = `📊 דוח ציונים: ${fileName}\n`;
