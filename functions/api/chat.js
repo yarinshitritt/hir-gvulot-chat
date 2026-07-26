@@ -90,7 +90,7 @@ export async function onRequest(context) {
     }
 }
 
-// פונקציית העזר לטיפול בהעלאת קבצים
+// פונקציית העזר לטיפול בהעלאת קבצים עם parsing חכם
 async function handleFileUpload(request, env) {
   const kv = env.CHAT_KV;
   try {
@@ -107,59 +107,120 @@ async function handleFileUpload(request, env) {
         // ייבוא XLSX בצורה דינמית
         const XLSX = await import('xlsx');
         
-        // קריאה של הקובץ כ-ArrayBuffer ישירות (לא כטקסט!)
+        // קריאה של הקובץ כ-ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         
-        // קריאת ה-Excel מה-Uint8Array
+        // קריאת ה-Excel
         const workbook = XLSX.read(uint8Array, { type: 'array' });
         
         // קריאה של כל גיליונות העבודה
-        let excelContent = `📊 קובץ Excel: ${fileName}\n\n`;
+        let excelContent = `📊 דוח ציונים: ${fileName}\n`;
+        excelContent += `תאריך העלאה: ${new Date().toLocaleString('he-IL')}\n`;
+        excelContent += `${'='.repeat(100)}\n\n`;
+        
+        let totalStudents = 0;
         
         workbook.SheetNames.forEach((sheetName) => {
           const worksheet = workbook.Sheets[sheetName];
-          const data = XLSX.utils.sheet_to_json(worksheet);
           
-          excelContent += `\n--- גיליון: ${sheetName} ---\n`;
-          excelContent += `מספר שורות: ${data.length}\n\n`;
+          // קריאה כמו array
+          const allData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
-          // הדפסת נתונים בפורמט קריא
-          if (data.length > 0) {
-            data.forEach((row, index) => {
-              excelContent += `שורה ${index + 1}: `;
-              const rowStr = Object.entries(row)
-                .filter(([, val]) => val !== null && val !== undefined && val !== '')
-                .map(([key, val]) => `${key}: ${val}`)
-                .join(" | ");
-              excelContent += rowStr + '\n';
-            });
+          // זיהוי שורת ה-headers
+          let headerRowIdx = 0;
+          for (let i = 0; i < Math.min(5, allData.length); i++) {
+            const row = allData[i];
+            if (row && row.join('|').toLowerCase().includes('משתמש')) {
+              headerRowIdx = i;
+              break;
+            }
           }
+          
+          const headers = allData[headerRowIdx] || [];
+          
+          // דלג על שורות metadata
+          let dataStartIdx = headerRowIdx + 1;
+          while (dataStartIdx < allData.length) {
+            const row = allData[dataStartIdx];
+            if (!row || row.length === 0 || row.every(v => v === undefined || v === null || v === '')) {
+              dataStartIdx++;
+              continue;
+            }
+            
+            const rowStr = row.slice(0, Math.min(15, row.length)).join('|');
+            if (rowStr.includes('%') || rowStr.includes('משקל') || rowStr.includes('מחלקה')) {
+              dataStartIdx++;
+              continue;
+            }
+            
+            break;
+          }
+          
+          const studentRows = allData.slice(dataStartIdx);
+          const validStudents = studentRows.filter(r => r && r.some(v => v !== undefined && v !== null && v !== ''));
+          
+          excelContent += `📋 גיליון: "${sheetName}"\n`;
+          excelContent += `${'-'.repeat(100)}\n`;
+          excelContent += `כמות החניכים: ${validStudents.length}\n`;
+          excelContent += `עמודות ראשיות: ${headers.slice(0, 10).filter(h => h).join(' | ')} ...\n\n`;
+          
+          // הדפסת כל חניך
+          validStudents.forEach((row, index) => {
+            const studentData = {};
+            headers.forEach((header, colIdx) => {
+              if (header) {
+                const value = row[colIdx];
+                if (value !== undefined && value !== null && value !== '') {
+                  studentData[header] = value;
+                }
+              }
+            });
+            
+            if (Object.keys(studentData).length > 0) {
+              excelContent += `\n👤 חניך ${totalStudents + index + 1}:\n`;
+              Object.entries(studentData).slice(0, 15).forEach(([key, value]) => {
+                excelContent += `  • ${key}: ${value}\n`;
+              });
+              
+              if (Object.keys(studentData).length > 15) {
+                excelContent += `  • ... (עוד ${Object.keys(studentData).length - 15} פריטים)\n`;
+              }
+            }
+          });
+          
+          totalStudents += validStudents.length;
+          excelContent += '\n' + `${'='.repeat(100)}\n\n`;
         });
 
+        excelContent += `\n📊 סיכום כללי:\n`;
+        excelContent += `• סה"כ חניכים: ${totalStudents}\n`;
+        excelContent += `• מספר גיליונות: ${workbook.SheetNames.length}\n`;
+
         // שמירה ב-KV
-        await kv.put(`file:${Date.now()}:${fileName}`, excelContent, { expirationTtl: 60 * 60 * 24 * 7 });
+        const fileKey = `file:${Date.now()}:${fileName}`;
+        await kv.put(fileKey, excelContent, { expirationTtl: 60 * 60 * 24 * 7 });
 
         return Response.json({ 
-          reply: `✅ קובץ Excel ${fileName} נשמר בהצלחה!\n\nעכשיו תוכל לשאול אותי על הציונים והנתונים!` 
+          reply: `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n\n🔍 הקובץ קורא כמו שצריך!\n\nעכשיו תוכל לשאול אותי על הציונים!` 
         });
 
       } catch (excelError) {
         console.error("Error parsing Excel:", excelError);
-        return Response.json({ reply: "❌ שגיאה בקריאת קובץ Excel - ודא שהקובץ תקין" });
+        return Response.json({ reply: "❌ שגיאה בקריאת קובץ Excel:\n" + excelError.message });
       }
     } else {
-      // לקבצים רגילים (טקסט וכו')
+      // לקבצים רגילים
       const text = await file.text();
       await kv.put(`file:${Date.now()}:${fileName}`, text, { expirationTtl: 60 * 60 * 24 * 7 });
 
       return Response.json({ 
-        reply: `✅ קובץ ${fileName} נשמר בהצלחה!` 
+        reply: `✅ קובץ טקסט ${fileName} נשמר בהצלחה!` 
       });
     }
 
   } catch (e) {
     console.error(e);
-    return Response.json({ reply: "❌ שגיאה בעיבוד הקובץ - " + e.message });
+    return Response.json({ reply: "❌ שגיאה בעיבוד הקובץ:\n" + e.message });
   }
 }
