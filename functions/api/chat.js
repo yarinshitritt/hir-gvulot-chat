@@ -27,14 +27,61 @@ export async function onRequest(context) {
 
       // 2. משיכת כל הקבצים שהמשתמשים העלו ל-KV
       const list = await kv.list({ prefix: "file:" });
+      
+      // בנה מפה של קבוצות וקבציהן
+      const filesByGroup = {};
+      const allFiles = {};
+      
       for (const key of list.keys) {
         const fileContent = await kv.get(key.name);
         if (fileContent) {
-          fullContext += `\n${fileContent}\n`;
+          allFiles[key.name] = fileContent;
+          
+          // חלץ את שם הקובץ ממפתח ה-KV
+          const fileName = key.name.split(':').pop(); // מחלץ את שם הקובץ
+          
+          // זיהוי הקבוצה לפי שם הקובץ
+          let groupName = 'unknown';
+          if (fileName.toLowerCase().includes('קרקל')) {
+            groupName = 'קרקל';
+          } else if (fileName.toLowerCase().includes('ברדלס')) {
+            groupName = 'ברדלס';
+          } else if (fileName.toLowerCase().includes('אריות')) {
+            groupName = 'אריות';
+          } else if (fileName.toLowerCase().includes('מתקדם')) {
+            groupName = 'מתקדם';
+          } else if (fileName.toLowerCase().includes('בסיסי')) {
+            groupName = 'בסיסי';
+          }
+          
+          if (!filesByGroup[groupName]) {
+            filesByGroup[groupName] = [];
+          }
+          filesByGroup[groupName].push({ name: key.name, content: fileContent });
         }
       }
 
-      // 3. בניית היסטוריית השיחה ל-Gemini
+      // 3. בנה קונטקסט עם הפרדה בין קבוצות
+      fullContext += `\n📌 קבוצות שהועלו:\n`;
+      for (const group in filesByGroup) {
+        fullContext += `- ${group}: ${filesByGroup[group].length} קובץ/ים\n`;
+      }
+      
+      fullContext += `\n${'='.repeat(100)}\n`;
+      fullContext += `📊 הנתונים המלאים:\n`;
+      fullContext += `${'='.repeat(100)}\n`;
+      
+      // הוסף את כל הנתונים מחולקים לפי קבוצה
+      for (const group in filesByGroup) {
+        fullContext += `\n📌 קבוצה: ${group}\n`;
+        fullContext += `${'-'.repeat(100)}\n`;
+        for (const file of filesByGroup[group]) {
+          fullContext += `\n${file.content}\n`;
+        }
+        fullContext += `${'-'.repeat(100)}\n`;
+      }
+
+      // 4. בניית היסטוריית השיחה ל-Gemini
       const geminiMessages = [
         {
           role: "user",
@@ -42,7 +89,7 @@ export async function onRequest(context) {
         },
         {
           role: "model",
-          parts: [{ text: "הבנתי את ההנחיות והנתונים. אני מוכן לענות על כל שאלה בנושא חי\"ר גבולות וציוני החניכים, וידעתי להבדיל בין הקבוצות השונות לפי שמות הקבצים שהועלו." }]
+          parts: [{ text: "הבנתי את ההנחיות והנתונים. אני מוכן לענות על כל שאלה בנושא חי\"ר גבולות וציוני החניכים, וידעתי להבדיל בצורה הפוכה בין הקבוצות השונות. כשמשתמש שואל על קבוצה מסוימת - אני משתמש רק בנתונים של אותה קבוצה." }]
         }
       ];
 
@@ -54,7 +101,7 @@ export async function onRequest(context) {
         });
       });
 
-      // 4. שליחה ל-Gemini
+      // 5. שליחה ל-Gemini
       const geminiRes = await fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
         {
@@ -220,7 +267,7 @@ async function handleFileUpload(request, env) {
         await kv.put(fileKey, excelContent, { expirationTtl: 60 * 60 * 24 * 7 });
 
         return Response.json({ 
-          reply: `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• קבוצה: **${groupName}**\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n\n🔍 הקובץ קורא כמו שצריך!\n\nעכשיו תוכל לשאול אותי על הציונים, ולבדוק הבדלים בין קבוצות!` 
+          reply: `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• קבוצה: **${groupName}**\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n\n🔍 הנתונים מופרדים לפי קבוצות!\n\nעכשיו תוכל לשאול על קבוצות ספציפיות!` 
         });
 
       } catch (excelError) {
