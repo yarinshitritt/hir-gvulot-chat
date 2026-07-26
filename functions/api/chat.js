@@ -42,7 +42,7 @@ export async function onRequest(context) {
         },
         {
           role: "model",
-          parts: [{ text: "הבנתי את ההנחיות והנתונים. אני מוכן לענות על כל שאלה בנושא חי\"ר גבולות וציוני החניכים." }]
+          parts: [{ text: "הבנתי את ההנחיות והנתונים. אני מוכן לענות על כל שאלה בנושא חי\"ר גבולות וציוני החניכים, וידעתי להבדיל בין הקבוצות השונות לפי שמות הקבצים שהועלו." }]
         }
       ];
 
@@ -115,8 +115,25 @@ async function handleFileUpload(request, env) {
         const workbook = XLSX.read(uint8Array, { type: 'array' });
         
         // קריאה של כל גיליונות העבודה
-        let excelContent = `📊 דוח ציונים: ${fileName}\n`;
+        let excelContent = `📊 **שם הקובץ: ${fileName}**\n`;
         excelContent += `תאריך העלאה: ${new Date().toLocaleString('he-IL')}\n`;
+        excelContent += `${'='.repeat(100)}\n\n`;
+        
+        // זיהוי הקבוצה/יחידה לפי שם הקובץ
+        let groupName = '[קבוצה לא מזוהה]';
+        if (fileName.toLowerCase().includes('קרקל')) {
+          groupName = 'קרקל';
+        } else if (fileName.toLowerCase().includes('ברדלס')) {
+          groupName = 'ברדלס';
+        } else if (fileName.toLowerCase().includes('אריות')) {
+          groupName = 'אריות';
+        } else if (fileName.toLowerCase().includes('מתקדם')) {
+          groupName = 'אימון מתקדם';
+        } else if (fileName.toLowerCase().includes('בסיסי')) {
+          groupName = 'אימון בסיסי';
+        }
+        
+        excelContent += `📌 קבוצה/יחידה: **${groupName}**\n`;
         excelContent += `${'='.repeat(100)}\n\n`;
         
         let totalStudents = 0;
@@ -178,7 +195,7 @@ async function handleFileUpload(request, env) {
             });
             
             if (Object.keys(studentData).length > 0) {
-              excelContent += `\n👤 חניך ${totalStudents + index + 1}:\n`;
+              excelContent += `\n👤 חניך ${totalStudents + index + 1} (${groupName}):\n`;
               Object.entries(studentData).slice(0, 15).forEach(([key, value]) => {
                 excelContent += `  • ${key}: ${value}\n`;
               });
@@ -193,8 +210,9 @@ async function handleFileUpload(request, env) {
           excelContent += '\n' + `${'='.repeat(100)}\n\n`;
         });
 
-        excelContent += `\n📊 סיכום כללי:\n`;
+        excelContent += `\n📊 סיכום כללי (${groupName}):\n`;
         excelContent += `• סה"כ חניכים: ${totalStudents}\n`;
+        excelContent += `• קבוצה: ${groupName}\n`;
         excelContent += `• מספר גיליונות: ${workbook.SheetNames.length}\n`;
 
         // שמירה ב-KV
@@ -202,7 +220,7 @@ async function handleFileUpload(request, env) {
         await kv.put(fileKey, excelContent, { expirationTtl: 60 * 60 * 24 * 7 });
 
         return Response.json({ 
-          reply: `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n\n🔍 הקובץ קורא כמו שצריך!\n\nעכשיו תוכל לשאול אותי על הציונים!` 
+          reply: `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• קבוצה: **${groupName}**\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n\n🔍 הקובץ קורא כמו שצריך!\n\nעכשיו תוכל לשאול אותי על הציונים, ולבדוק הבדלים בין קבוצות!` 
         });
 
       } catch (excelError) {

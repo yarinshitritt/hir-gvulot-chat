@@ -16,7 +16,7 @@ export async function onRequest(context) {
         // ייבוא XLSX בצורה דינמית
         const XLSX = await import('xlsx');
         
-        // קריאה של הקובץ כ-ArrayBuffer ישירות
+        // קריאה של הקובץ כ-ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
         
@@ -24,8 +24,25 @@ export async function onRequest(context) {
         const workbook = XLSX.read(uint8Array, { type: 'array' });
         
         // קריאה של כל גיליונות העבודה
-        let excelContent = `📊 דוח ציונים: ${fileName}\n`;
+        let excelContent = `📊 **שם הקובץ: ${fileName}**\n`;
         excelContent += `תאריך העלאה: ${new Date().toLocaleString('he-IL')}\n`;
+        excelContent += `${'='.repeat(100)}\n\n`;
+        
+        // זיהוי הקבוצה/יחידה לפי שם הקובץ
+        let groupName = '[קבוצה לא מזוהה]';
+        if (fileName.toLowerCase().includes('קרקל')) {
+          groupName = 'קרקל';
+        } else if (fileName.toLowerCase().includes('ברדלס')) {
+          groupName = 'ברדלס';
+        } else if (fileName.toLowerCase().includes('אריות')) {
+          groupName = 'אריות';
+        } else if (fileName.toLowerCase().includes('מתקדם')) {
+          groupName = 'אימון מתקדם';
+        } else if (fileName.toLowerCase().includes('בסיסי')) {
+          groupName = 'אימון בסיסי';
+        }
+        
+        excelContent += `📌 קבוצה/יחידה: **${groupName}**\n`;
         excelContent += `${'='.repeat(100)}\n\n`;
         
         let totalStudents = 0;
@@ -48,7 +65,7 @@ export async function onRequest(context) {
           
           const headers = allData[headerRowIdx] || [];
           
-          // דלג על שורות metadata (משקלים, כותרות סעיפים וכו')
+          // דלג על שורות metadata
           let dataStartIdx = headerRowIdx + 1;
           while (dataStartIdx < allData.length) {
             const row = allData[dataStartIdx];
@@ -57,7 +74,6 @@ export async function onRequest(context) {
               continue;
             }
             
-            // בדוק אם זו שורת משקלים (מכילה %)
             const rowStr = row.slice(0, Math.min(15, row.length)).join('|');
             if (rowStr.includes('%') || rowStr.includes('משקל') || rowStr.includes('מחלקה')) {
               dataStartIdx++;
@@ -90,7 +106,7 @@ export async function onRequest(context) {
             
             // בדוק אם יש בפועל נתונים משמעותיים
             if (Object.keys(studentData).length > 0) {
-              excelContent += `\n👤 חניך ${totalStudents + index + 1}:\n`;
+              excelContent += `\n👤 חניך ${totalStudents + index + 1} (${groupName}):\n`;
               Object.entries(studentData).slice(0, 15).forEach(([key, value]) => {
                 excelContent += `  • ${key}: ${value}\n`;
               });
@@ -105,17 +121,17 @@ export async function onRequest(context) {
           excelContent += '\n' + `${'='.repeat(100)}\n\n`;
         });
 
-        excelContent += `\n📊 סיכום כללי:\n`;
-        excelContent += `• סה"כ חניכים שזוהו: ${totalStudents}\n`;
+        excelContent += `\n📊 סיכום כללי (${groupName}):\n`;
+        excelContent += `• סה"כ חניכים: ${totalStudents}\n`;
+        excelContent += `• קבוצה: ${groupName}\n`;
         excelContent += `• מספר גיליונות: ${workbook.SheetNames.length}\n`;
-        excelContent += `• שם הגיליון הראשי: ${workbook.SheetNames[0]}\n`;
 
         // שמירה ב-KV
         const fileKey = `file:${Date.now()}:${fileName}`;
         await kv.put(fileKey, excelContent, { expirationTtl: 60 * 60 * 24 * 7 });
 
         return Response.json({ 
-          reply: `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n\n🔍 הקובץ קורא כמו שצריך - בלי metadata מיותר!\n\nעכשיו תוכל לשאול אותי על הציונים, הביצועים, והערכות!` 
+          reply: `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• קבוצה: **${groupName}**\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n\n🔍 הקובץ קורא כמו שצריך!\n\nעכשיו תוכל לשאול אותי על הציונים, ולבדוק הבדלים בין קבוצות!` 
         });
 
       } catch (excelError) {
