@@ -28,58 +28,128 @@ export async function onRequest(context) {
       // 2. משיכת כל הקבצים שהמשתמשים העלו ל-KV
       const list = await kv.list({ prefix: "file:" });
       
-      // בנה מפה של קבוצות וקבציהן
-      const filesByGroup = {};
-      const allFiles = {};
+      // בנה מפה של קבוצות ומחזורים
+      const filesByGroupAndCycle = {};
       
       for (const key of list.keys) {
         const fileContent = await kv.get(key.name);
         if (fileContent) {
-          allFiles[key.name] = fileContent;
-          
           // חלץ את שם הקובץ ממפתח ה-KV
-          const fileName = key.name.split(':').pop(); // מחלץ את שם הקובץ
+          const fileName = key.name.split(':').pop();
           
-          // זיהוי הקבוצה לפי שם הקובץ
+          // זיהוי הקבוצה
           let groupName = 'unknown';
+          let groupTag = '[UNKNOWN]';
+          
           if (fileName.toLowerCase().includes('קרקל')) {
             groupName = 'קרקל';
+            groupTag = '[קרקל]';
           } else if (fileName.toLowerCase().includes('ברדלס')) {
             groupName = 'ברדלס';
+            groupTag = '[ברדלס]';
           } else if (fileName.toLowerCase().includes('אריות')) {
             groupName = 'אריות';
+            groupTag = '[אריות]';
           } else if (fileName.toLowerCase().includes('מתקדם')) {
             groupName = 'מתקדם';
+            groupTag = '[מתקדם]';
           } else if (fileName.toLowerCase().includes('בסיסי')) {
             groupName = 'בסיסי';
+            groupTag = '[בסיסי]';
           }
           
-          if (!filesByGroup[groupName]) {
-            filesByGroup[groupName] = [];
+          // זיהוי המחזור/תקופה
+          let cycleInfo = '';
+          let cycleTag = '';
+          
+          const monthsHebrew = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 
+                               'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+          const monthsShort = ['ין', 'פב', 'מר', 'אפ', 'מאי', 'יון', 'יול', 'אוג', 'ספ', 'אוק', 'נוב', 'דצ'];
+          
+          for (let i = 0; i < monthsHebrew.length; i++) {
+            if (fileName.toLowerCase().includes(monthsHebrew[i])) {
+              cycleInfo = monthsHebrew[i];
+              cycleTag = `[${monthsHebrew[i].substring(0, 3)}]`;
+              break;
+            }
           }
-          filesByGroup[groupName].push({ name: key.name, content: fileContent });
+          
+          let yearInfo = '';
+          const yearMatch = fileName.match(/202[0-9]|25|26/);
+          if (yearMatch) {
+            yearInfo = yearMatch[0];
+            if (yearInfo === '25') yearInfo = '2025';
+            if (yearInfo === '26') yearInfo = '2026';
+          }
+          
+          let fullCycleTag = '';
+          if (cycleInfo && yearInfo) {
+            fullCycleTag = `${cycleTag}${yearInfo.substring(2)}`;
+          } else if (cycleInfo) {
+            fullCycleTag = cycleTag;
+          } else if (yearInfo) {
+            fullCycleTag = `[${yearInfo}]`;
+          }
+          
+          // בנה קלידי כ"group_cycle"
+          const compositeKey = `${groupTag}${fullCycleTag || '[NO-CYCLE]'}`;
+          
+          if (!filesByGroupAndCycle[compositeKey]) {
+            filesByGroupAndCycle[compositeKey] = { 
+              group: groupName, 
+              groupTag: groupTag,
+              cycle: cycleInfo, 
+              year: yearInfo,
+              cycleTag: fullCycleTag,
+              files: [] 
+            };
+          }
+          filesByGroupAndCycle[compositeKey].files.push({ name: fileName, content: fileContent });
         }
       }
 
-      // 3. בנה קונטקסט עם הפרדה בין קבוצות
-      fullContext += `\n📌 קבוצות שהועלו:\n`;
-      for (const group in filesByGroup) {
-        fullContext += `- ${group}: ${filesByGroup[group].length} קובץ/ים\n`;
+      // 3. בנה קונטקסט עם הפרדה קפדנית לפי קבוצה ומחזור
+      fullContext += `\n${'='.repeat(100)}\n`;
+      fullContext += `📌 קבוצות ומחזורים שהועלו:\n`;
+      for (const compositeKey in filesByGroupAndCycle) {
+        const info = filesByGroupAndCycle[compositeKey];
+        fullContext += `- ${info.groupTag}${info.cycleTag || ''} ${info.group}${info.cycle ? ' (' + info.cycle + (info.year ? ' ' + info.year : '') + ')' : ''}: ${info.files.length} קובץ/ים\n`;
       }
       
       fullContext += `\n${'='.repeat(100)}\n`;
-      fullContext += `📊 הנתונים המלאים:\n`;
+      fullContext += `⚠️ חשוב: כל חניך כולל תג קבוצה ותג מחזור!\n`;
+      fullContext += `לדוגמה: [קרקל][נוב]25 חניך X → משמעות: חניך X של קרקל, נובמבר 2025\n`;
+      fullContext += `          [ברדלס][מר]25 חניך Y → משמעות: חניך Y של ברדלס, מרץ 2025\n`;
       fullContext += `${'='.repeat(100)}\n`;
       
-      // הוסף את כל הנתונים מחולקים לפי קבוצה
-      for (const group in filesByGroup) {
-        fullContext += `\n📌 קבוצה: ${group}\n`;
-        fullContext += `${'-'.repeat(100)}\n`;
-        for (const file of filesByGroup[group]) {
-          fullContext += `\n${file.content}\n`;
+      fullContext += `\n📊 הנתונים המלאים (מחולקים לפי קבוצות ומחזורים):\n`;
+      fullContext += `${'='.repeat(100)}\n`;
+      
+      // הוסף את כל הנתונים מחולקים לפי קבוצה ומחזור
+      for (const compositeKey in filesByGroupAndCycle) {
+        const info = filesByGroupAndCycle[compositeKey];
+        fullContext += `\n${'#'.repeat(50)}\n`;
+        fullContext += `📌 קבוצה: ${info.groupTag} ${info.group}\n`;
+        if (info.cycle) {
+          fullContext += `📅 מחזור: ${info.cycleTag} ${info.cycle}${info.year ? ' ' + info.year : ''}\n`;
         }
-        fullContext += `${'-'.repeat(100)}\n`;
+        fullContext += `${'#'.repeat(50)}\n`;
+        fullContext += `⚠️ זכור: כל חניך בחלק זה שייך ל-${info.groupTag}${info.cycleTag || ''}\n`;
+        
+        for (const file of info.files) {
+          fullContext += `\n📁 קובץ: ${file.name}\n`;
+          fullContext += file.content;
+          fullContext += `\n✓ סיום חלק של ${info.groupTag}${info.cycleTag || ''}\n`;
+        }
+        
+        fullContext += `\n${'#'.repeat(50)}\n`;
       }
+
+      fullContext += `\n${'='.repeat(100)}\n`;
+      fullContext += `📋 הנחיה קריטית:\n`;
+      fullContext += `כשמשתמש שואל על חניך כלשהו, בדוק את התגים שלו - קבוצה ומחזור!\n`;
+      fullContext += `אל תערבב חניכים בין קבוצות או בין מחזורים גם אם השמות דומים!\n`;
+      fullContext += `${'='.repeat(100)}\n`;
 
       // 4. בניית היסטוריית השיחה ל-Gemini
       const geminiMessages = [
@@ -89,11 +159,11 @@ export async function onRequest(context) {
         },
         {
           role: "model",
-          parts: [{ text: "הבנתי את ההנחיות והנתונים. אני מוכן לענות על כל שאלה בנושא חי\"ר גבולות וציוני החניכים, וידעתי להבדיל בצורה הפוכה בין הקבוצות השונות. כשמשתמש שואל על קבוצה מסוימת - אני משתמש רק בנתונים של אותה קבוצה." }]
+          parts: [{ text: "הבנתי את ההנחיות תוך כדי שמירה קפדנית על התגים של הקבוצות והמחזורים. כל חניך כולל תג קבוצה ([קרקל], [ברדלס], וכו') וגם תג מחזור ([נוב]25, [מר]25, וכו'). אני לא אערבב בינהם ולא אחשוב שחניך של קבוצה או מחזור אחד שייך לקבוצה או מחזור אחר. אם חניך X מתויג [קרקל][נוב]25, הוא תמיד יהיה של קרקל בנובמבר 2025." }]
         }
       ];
 
-      // הוספת הודעות המשתמש אל היסטוריית השיחה
+      // הוספת הודעות המשתמש
       messages.forEach(m => {
         geminiMessages.push({
           role: m.role === "system" ? "user" : m.role,
@@ -137,7 +207,6 @@ export async function onRequest(context) {
     }
 }
 
-// פונקציית העזר לטיפול בהעלאת קבצים עם parsing חכם
 async function handleFileUpload(request, env) {
   const kv = env.CHAT_KV;
   try {
@@ -148,50 +217,84 @@ async function handleFileUpload(request, env) {
 
     const fileName = file.name;
 
-    // בדיקה אם זה קובץ Excel
     if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
       try {
-        // ייבוא XLSX בצורה דינמית
         const XLSX = await import('xlsx');
         
-        // קריאה של הקובץ כ-ArrayBuffer
         const arrayBuffer = await file.arrayBuffer();
         const uint8Array = new Uint8Array(arrayBuffer);
-        
-        // קריאת ה-Excel
         const workbook = XLSX.read(uint8Array, { type: 'array' });
         
-        // קריאה של כל גיליונות העבודה
+        // זיהוי קבוצה
+        let groupName = '[קבוצה לא מזוהה]';
+        let groupTag = '[UNKNOWN]';
+        
+        if (fileName.toLowerCase().includes('קרקל')) {
+          groupName = 'קרקל';
+          groupTag = '[קרקל]';
+        } else if (fileName.toLowerCase().includes('ברדלס')) {
+          groupName = 'ברדלס';
+          groupTag = '[ברדלס]';
+        } else if (fileName.toLowerCase().includes('אריות')) {
+          groupName = 'אריות';
+          groupTag = '[אריות]';
+        } else if (fileName.toLowerCase().includes('מתקדם')) {
+          groupName = 'אימון מתקדם';
+          groupTag = '[מתקדם]';
+        } else if (fileName.toLowerCase().includes('בסיסי')) {
+          groupName = 'אימון בסיסי';
+          groupTag = '[בסיסי]';
+        }
+        
+        // זיהוי מחזור
+        let cycleInfo = '';
+        let cycleTag = '';
+        const monthsHebrew = ['ינואר', 'פברואר', 'מרץ', 'אפריל', 'מאי', 'יוני', 
+                             'יולי', 'אוגוסט', 'ספטמבר', 'אוקטובר', 'נובמבר', 'דצמבר'];
+        
+        for (let i = 0; i < monthsHebrew.length; i++) {
+          if (fileName.toLowerCase().includes(monthsHebrew[i])) {
+            cycleInfo = monthsHebrew[i];
+            cycleTag = `[${monthsHebrew[i].substring(0, 3)}]`;
+            break;
+          }
+        }
+        
+        let yearInfo = '';
+        const yearMatch = fileName.match(/202[0-9]|25|26/);
+        if (yearMatch) {
+          yearInfo = yearMatch[0];
+          if (yearInfo === '25') yearInfo = '2025';
+          if (yearInfo === '26') yearInfo = '2026';
+        }
+        
+        let fullCycleTag = '';
+        if (cycleInfo && yearInfo) {
+          fullCycleTag = `${cycleTag}${yearInfo.substring(2)}`;
+        } else if (cycleInfo) {
+          fullCycleTag = cycleTag;
+        } else if (yearInfo) {
+          fullCycleTag = `[${yearInfo}]`;
+        }
+        
         let excelContent = `📊 **שם הקובץ: ${fileName}**\n`;
         excelContent += `תאריך העלאה: ${new Date().toLocaleString('he-IL')}\n`;
         excelContent += `${'='.repeat(100)}\n\n`;
         
-        // זיהוי הקבוצה/יחידה לפי שם הקובץ
-        let groupName = '[קבוצה לא מזוהה]';
-        if (fileName.toLowerCase().includes('קרקל')) {
-          groupName = 'קרקל';
-        } else if (fileName.toLowerCase().includes('ברדלס')) {
-          groupName = 'ברדלס';
-        } else if (fileName.toLowerCase().includes('אריות')) {
-          groupName = 'אריות';
-        } else if (fileName.toLowerCase().includes('מתקדם')) {
-          groupName = 'אימון מתקדם';
-        } else if (fileName.toLowerCase().includes('בסיסי')) {
-          groupName = 'אימון בסיסי';
+        excelContent += `📌 קבוצה/יחידה: **${groupName}** (תג: ${groupTag})\n`;
+        if (cycleInfo || yearInfo) {
+          excelContent += `📅 מחזור/תקופה: **${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}** (תג: ${fullCycleTag})\n`;
         }
-        
-        excelContent += `📌 קבוצה/יחידה: **${groupName}**\n`;
+        excelContent += `${'='.repeat(100)}\n\n`;
+        excelContent += `⚠️ חשוב: כל חניך בקבוצה זו יתויג כ-${groupTag}${fullCycleTag}\n`;
         excelContent += `${'='.repeat(100)}\n\n`;
         
         let totalStudents = 0;
         
         workbook.SheetNames.forEach((sheetName) => {
           const worksheet = workbook.Sheets[sheetName];
-          
-          // קריאה כמו array
           const allData = XLSX.utils.sheet_to_json(worksheet, { header: 1 });
           
-          // זיהוי שורת ה-headers
           let headerRowIdx = 0;
           for (let i = 0; i < Math.min(5, allData.length); i++) {
             const row = allData[i];
@@ -203,7 +306,6 @@ async function handleFileUpload(request, env) {
           
           const headers = allData[headerRowIdx] || [];
           
-          // דלג על שורות metadata
           let dataStartIdx = headerRowIdx + 1;
           while (dataStartIdx < allData.length) {
             const row = allData[dataStartIdx];
@@ -217,19 +319,17 @@ async function handleFileUpload(request, env) {
               dataStartIdx++;
               continue;
             }
-            
             break;
           }
           
           const studentRows = allData.slice(dataStartIdx);
           const validStudents = studentRows.filter(r => r && r.some(v => v !== undefined && v !== null && v !== ''));
           
-          excelContent += `📋 גיליון: "${sheetName}"\n`;
+          excelContent += `📋 גיליון: "${sheetName}" (קבוצה: ${groupTag}${fullCycleTag})\n`;
           excelContent += `${'-'.repeat(100)}\n`;
           excelContent += `כמות החניכים: ${validStudents.length}\n`;
           excelContent += `עמודות ראשיות: ${headers.slice(0, 10).filter(h => h).join(' | ')} ...\n\n`;
           
-          // הדפסת כל חניך
           validStudents.forEach((row, index) => {
             const studentData = {};
             headers.forEach((header, colIdx) => {
@@ -242,7 +342,15 @@ async function handleFileUpload(request, env) {
             });
             
             if (Object.keys(studentData).length > 0) {
-              excelContent += `\n👤 חניך ${totalStudents + index + 1} (${groupName}):\n`;
+              excelContent += `\n${groupTag} ${fullCycleTag} 👤 חניך ${totalStudents + index + 1}:\n`;
+              
+              excelContent += `  • קבוצה: ${groupName}\n`;
+              excelContent += `  • תג קבוצה: ${groupTag}\n`;
+              if (cycleInfo || yearInfo) {
+                excelContent += `  • מחזור: ${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}\n`;
+                excelContent += `  • תג מחזור: ${fullCycleTag}\n`;
+              }
+              
               Object.entries(studentData).slice(0, 15).forEach(([key, value]) => {
                 excelContent += `  • ${key}: ${value}\n`;
               });
@@ -257,25 +365,35 @@ async function handleFileUpload(request, env) {
           excelContent += '\n' + `${'='.repeat(100)}\n\n`;
         });
 
-        excelContent += `\n📊 סיכום כללי (${groupName}):\n`;
+        excelContent += `\n📊 סיכום כללי (${groupTag}${fullCycleTag} ${groupName}):\n`;
         excelContent += `• סה"כ חניכים: ${totalStudents}\n`;
         excelContent += `• קבוצה: ${groupName}\n`;
+        excelContent += `• תג קבוצה להבדלה: ${groupTag}\n`;
+        if (cycleInfo || yearInfo) {
+          excelContent += `• מחזור/תקופה: ${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}\n`;
+          excelContent += `• תג מחזור להבדלה: ${fullCycleTag}\n`;
+        }
         excelContent += `• מספר גיליונות: ${workbook.SheetNames.length}\n`;
+        excelContent += `\n⚠️ חשוב: כל חניך בקובץ זה שייך ל-${groupTag}${fullCycleTag} (${groupName}${cycleInfo ? ' ' + cycleInfo : ''})\n`;
 
-        // שמירה ב-KV
         const fileKey = `file:${Date.now()}:${fileName}`;
         await kv.put(fileKey, excelContent, { expirationTtl: 60 * 60 * 24 * 7 });
 
-        return Response.json({ 
-          reply: `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• קבוצה: **${groupName}**\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n\n🔍 הנתונים מופרדים לפי קבוצות!\n\nעכשיו תוכל לשאול על קבוצות ספציפיות!` 
-        });
+        let successMsg = `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• קבוצה: **${groupName}** (${groupTag})\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n`;
+        
+        if (cycleInfo || yearInfo) {
+          successMsg += `• מחזור/תקופה: **${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}** (${fullCycleTag})\n`;
+        }
+        
+        successMsg += `\n🏷️ כל חניך תויג בקבוצתו ובמחזורו - למניעת בלבול!\n\nעכשיו תוכל לשאול בביטחון!`;
+        
+        return Response.json({ reply: successMsg });
 
       } catch (excelError) {
         console.error("Error parsing Excel:", excelError);
         return Response.json({ reply: "❌ שגיאה בקריאת קובץ Excel:\n" + excelError.message });
       }
     } else {
-      // לקבצים רגילים
       const text = await file.text();
       await kv.put(`file:${Date.now()}:${fileName}`, text, { expirationTtl: 60 * 60 * 24 * 7 });
 
