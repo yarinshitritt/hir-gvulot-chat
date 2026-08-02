@@ -1,3 +1,10 @@
+function cleanText(val) {
+  if (val === null || val === undefined) return '';
+  return String(val)
+    .replace(/[\x00-\x08\x0B\x0C\x0E-\x1F\x7F\uFEFF\u200B-\u200D\uFFFD]/g, '')
+    .trim();
+}
+
 export async function onRequest(context) {
   const { request, env } = context;
   const kv = env.CHAT_KV;
@@ -224,16 +231,17 @@ export async function onRequest(context) {
           excelContent += `📋 גיליון: "${sheetName}" (קבוצה: ${groupTag}${fullCycleTag})\n`;
           excelContent += `${'-'.repeat(100)}\n`;
           excelContent += `כמות החניכים: ${validStudents.length}\n`;
-          excelContent += `עמודות ראשיות: ${headers.slice(0, 10).filter(h => h).join(' | ')} ...\n\n`;
+          excelContent += `עמודות ראשיות: ${headers.slice(0, 10).filter(h => h).map(h => cleanText(h)).filter(Boolean).join(' | ')} ...\n\n`;
           
           // הדפסת כל חניך עם תגי מחזור מהשם!
           validStudents.forEach((row, index) => {
             const studentData = {};
             headers.forEach((header, colIdx) => {
               if (header) {
-                const value = row[colIdx];
-                if (value !== undefined && value !== null && value !== '') {
-                  studentData[header] = value;
+                const cleanedHeader = cleanText(header);
+                const value = cleanText(row[colIdx]);
+                if (cleanedHeader && value !== '') {
+                  studentData[cleanedHeader] = value;
                 }
               }
             });
@@ -276,9 +284,9 @@ export async function onRequest(context) {
         excelContent += `• מספר גיליונות: ${workbook.SheetNames.length}\n`;
         excelContent += `\n⚠️ חשוב: כל חניך בקובץ זה שייך ל-${groupTag}${fullCycleTag} (${groupName}${cycleInfo ? ' ' + cycleInfo : ''})\n`;
 
-        // שמירה ב-KV
+        // שמירה ב-KV מנוקה
         const fileKey = `file:${Date.now()}:${fileName}`;
-        await kv.put(fileKey, excelContent, { expirationTtl: 60 * 60 * 24 * 7 });
+        await kv.put(fileKey, cleanText(excelContent), { expirationTtl: 60 * 60 * 24 * 7 });
 
         let successMsg = `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• קבוצה: **${groupName}** (${groupTag})\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n`;
         
@@ -300,7 +308,7 @@ export async function onRequest(context) {
     } else {
       // לקבצים רגילים
       const text = await file.text();
-      await kv.put(`file:${Date.now()}:${fileName}`, text, { expirationTtl: 60 * 60 * 24 * 7 });
+      await kv.put(`file:${Date.now()}:${fileName}`, cleanText(text), { expirationTtl: 60 * 60 * 24 * 7 });
 
       return Response.json({ 
         reply: `✅ קובץ טקסט ${fileName} נשמר בהצלחה!` 
