@@ -7,6 +7,7 @@
   <link rel="stylesheet" href="style.css">
   <link rel="icon" href="sources/images/baah icon.png" type="image/x-icon">
   <meta name="viewport" content="width=device-width, initial-scale=1, interactive-widget=resizes-content">
+  <!-- ✅ ספריית XLSX מ-CDN -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 </head>
 
@@ -25,7 +26,6 @@
   </div>
 
   <script>
-    // המערך מתחיל ריק לחלוטין. השרת יוסיף את הפרומפט של חי"ר גבולות בעצמו לפני השליחה לגוגל!
     let messages = []; 
     
     async function send() {
@@ -72,53 +72,57 @@
       }
     });
     
-    // העלאת קובץ
-// העלאת קובץ ופענוח אקסל
-document.getElementById('fileUpload').addEventListener('change', async (e) => {
-  const file = e.target.files[0];
-  if (!file) return;
+    // ✅ עלאת קובץ Excel - גרסה תקנית וחזקה
+    document.getElementById('fileUpload').addEventListener('change', async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
 
-  addMessage(`קורא ומפענח את הקובץ: ${file.name}...`, "user");
+      addMessage(`📁 קורא את הקובץ: ${file.name}...`, "user");
 
-  // שימוש ב-FileReader כדי לקרוא את קובץ האקסל
-  const reader = new FileReader();
-  
-  reader.onload = async function(e) {
-    try {
-      const data = new Uint8Array(e.target.result);
-      // קריאת האקסל בעזרת SheetJS
-      const workbook = XLSX.read(data, {type: 'array'});
+      try {
+        // ✅ קרא את הקובץ כ-ArrayBuffer (זה מה ש-XLSX צריך)
+        const arrayBuffer = await file.arrayBuffer();
+        
+        // ✅ פענח את ה-Excel
+        console.log(`📊 מנסה לפענח: ${file.name}`);
+        const workbook = XLSX.read(new Uint8Array(arrayBuffer), { type: 'array' });
+        
+        console.log(`✅ הקובץ נפתח בהצלחה! גיליונות: ${workbook.SheetNames}`);
+        
+        // ✅ לוקח את הגיליון הראשון
+        const firstSheetName = workbook.SheetNames[0];
+        const worksheet = workbook.Sheets[firstSheetName];
+        
+        // ✅ המרה ל-CSV (יותר קל לשרת)
+        const csvText = XLSX.utils.sheet_to_csv(worksheet);
+        
+        // ✅ שליחה לשרת כ-FormData
+        const formData = new FormData();
+        const blob = new Blob([csvText], { type: 'text/plain' });
+        formData.append('file', blob, file.name);
+        
+        console.log(`📤 שולח לשרת...`);
+        const res = await fetch("/api/upload", {
+          method: "POST",
+          body: formData
+        });
+        
+        if (!res.ok) {
+          throw new Error(`שגיאה בשרת: ${res.status}`);
+        }
+        
+        const resData = await res.json();
+        console.log(`✅ תשובה מהשרת:`, resData);
+        addMessage(resData.reply || "הקובץ הועלה בהצלחה", "bot");
+        
+      } catch (err) {
+        console.error(`❌ שגיאה:`, err);
+        addMessage(`❌ שגיאה בעלאת הקובץ: ${err.message}`, "bot");
+      }
       
-      // לוקחים את הגיליון הראשון (אפשר גם לעבור על כולם אם צריך)
-      const firstSheetName = workbook.SheetNames[0];
-      const worksheet = workbook.Sheets[firstSheetName];
-      
-      // המרה של הטבלה לטקסט קריא למודל (CSV)
-      const csvText = XLSX.utils.sheet_to_csv(worksheet);
-      
-      // אורזים את הטקסט כקובץ כדי לשלוח לשרת שלך בדיוק כמו קודם
-      const formData = new FormData();
-      const blob = new Blob([csvText], { type: 'text/plain' });
-      formData.append('file', blob, file.name + ".csv"); // נוסיף סיומת csv כדי שנזהה
-      
-      // שליחה לשרת
-      const res = await fetch("/api/upload", {
-        method: "POST",
-        body: formData
-      });
-      
-      const resData = await res.json();
-      addMessage(resData.reply, "bot");
-      
-    } catch (err) {
-      console.error(err);
-      addMessage("שגיאה בפענוח קובץ האקסל. ודא שזהו קובץ תקין.", "bot");
-    }
-  };
-  
-  // מתחילים את קריאת הקובץ
-  reader.readAsArrayBuffer(file);
-});
+      // ✅ נקה את ה-input כדי לאפשר העלאה של אותו קובץ שוב
+      e.target.value = '';
+    });
     </script>
 
 </body>
