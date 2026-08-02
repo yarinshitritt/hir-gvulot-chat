@@ -500,13 +500,9 @@ async function handleFileUpload(request, env) {
                 excelContent += `  • תג מחזור: ${fullCycleTag} (מתוך שם הקובץ)\n`;
               }
               
-              Object.entries(studentData).slice(0, 15).forEach(([key, value]) => {
+              Object.entries(studentData).forEach(([key, value]) => {
                 excelContent += `  • ${key}: ${value}\n`;
               });
-              
-              if (Object.keys(studentData).length > 15) {
-                excelContent += `  • ... (עוד ${Object.keys(studentData).length - 15} פריטים)\n`;
-              }
             }
           });
           
