@@ -59,68 +59,92 @@ export async function onRequest(context) {
           }
           
           // זיהוי המחזור משם הקובץ בלבד!
+          // 🔴 סינון תאריך ההעלאה קודם!
+          let relevantPart = fileName.toLowerCase();
+          
+          // הסר תאריכים בפורמט _DD-MM-YYYY
+          relevantPart = relevantPart.replace(/_\d{2}-\d{2}-\d{4}/, '');
+          relevantPart = relevantPart.replace(/_\d{2}\.\d{2}\.\d{4}/, '');
+          
+          // הסר סיומות קובץ
+          relevantPart = relevantPart.replace(/\.(xlsx|xls|csv|json|txt)$/g, '');
+          
           let cycleInfo = '';
           let cycleTag = '';
           
-          const lowerFileName = fileName.toLowerCase();
-          
-          const monthsMap = [
-            { names: ['_נוב_', ' נוב ', '-נוב-', 'נוב_', '_נוב'], month: 'נובמבר', tag: '[נוב]', num: 11 },
-            { names: ['_מר_', ' מר ', '-מר-', 'מרץ'], month: 'מרץ', tag: '[מר]', num: 3 },
-            { names: ['_יון_', ' יון ', '-יון-', 'יוני'], month: 'יוני', tag: '[יון]', num: 6 },
-            { names: ['_ין_', ' ין ', '-ין-', 'ינואר'], month: 'ינואר', tag: '[ין]', num: 1 },
-            { names: ['_פב_', ' פב ', '-פב-', 'פברואר'], month: 'פברואר', tag: '[פב]', num: 2 },
-            { names: ['_אפ_', ' אפ ', '-אפ-', 'אפריל'], month: 'אפריל', tag: '[אפ]', num: 4 },
-            { names: ['_מאי_', ' מאי ', '-מאי-', '_מאי'], month: 'מאי', tag: '[מאי]', num: 5 },
-            { names: ['_יול_', ' יול ', '-יול-', 'יולי'], month: 'יולי', tag: '[יול]', num: 7 },
-            { names: ['_אוג_', ' אוג ', '-אוג-', 'אוגוסט'], month: 'אוגוסט', tag: '[אוג]', num: 8 },
-            { names: ['_ספ_', ' ספ ', '-ספ-', 'ספטמבר'], month: 'ספטמבר', tag: '[ספ]', num: 9 },
-            { names: ['_אוק_', ' אוק ', '-אוק-', 'אוקטובר'], month: 'אוקטובר', tag: '[אוק]', num: 10 },
-            { names: ['_דצ_', ' דצ ', '-דצ-', 'דצמבר'], month: 'דצמבר', tag: '[דצ]', num: 12 },
-          ];
-          
-          for (const monthPattern of monthsMap) {
-            for (const name of monthPattern.names) {
-              if (lowerFileName.includes(name)) {
-                cycleInfo = monthPattern.month;
-                cycleTag = monthPattern.tag;
-                break;
-              }
-            }
-            if (cycleInfo) break;
+          if (relevantPart.includes('_נוב_') || relevantPart.includes(' נוב ') || 
+              relevantPart.includes('נוב_') || relevantPart.includes('_נוב')) {
+            cycleInfo = 'נובמבר';
+            cycleTag = '[נוב]';
+          }
+          else if (relevantPart.includes('_מר_') || relevantPart.includes(' מר ') ||
+                   relevantPart.includes('מרץ')) {
+            cycleInfo = 'מרץ';
+            cycleTag = '[מר]';
+          }
+          else if (relevantPart.includes('_יון_') || relevantPart.includes(' יון ') ||
+                   relevantPart.includes('יוני')) {
+            cycleInfo = 'יוני';
+            cycleTag = '[יון]';
+          }
+          else if (relevantPart.includes('_ין_') || relevantPart.includes(' ין ') ||
+                   relevantPart.includes('ינואר')) {
+            cycleInfo = 'ינואר';
+            cycleTag = '[ין]';
+          }
+          else if (relevantPart.includes('_פב_') || relevantPart.includes(' פב ') ||
+                   relevantPart.includes('פברואר')) {
+            cycleInfo = 'פברואר';
+            cycleTag = '[פב]';
+          }
+          else if (relevantPart.includes('_אפ_') || relevantPart.includes(' אפ ') ||
+                   relevantPart.includes('אפריל')) {
+            cycleInfo = 'אפריל';
+            cycleTag = '[אפ]';
+          }
+          else if (relevantPart.includes('_מאי_') || relevantPart.includes(' מאי ') ||
+                   relevantPart.includes('-מאי-')) {
+            cycleInfo = 'מאי';
+            cycleTag = '[מאי]';
+          }
+          else if (relevantPart.includes('_יול_') || relevantPart.includes(' יול ') ||
+                   relevantPart.includes('יולי')) {
+            cycleInfo = 'יולי';
+            cycleTag = '[יול]';
+          }
+          else if (relevantPart.includes('_אוג_') || relevantPart.includes(' אוג ') ||
+                   relevantPart.includes('אוגוסט')) {
+            cycleInfo = 'אוגוסט';
+            cycleTag = '[אוג]';
+          }
+          else if (relevantPart.includes('_ספ_') || relevantPart.includes(' ספ ') ||
+                   relevantPart.includes('ספטמבר')) {
+            cycleInfo = 'ספטמבר';
+            cycleTag = '[ספ]';
+          }
+          else if (relevantPart.includes('_אוק_') || relevantPart.includes(' אוק ') ||
+                   relevantPart.includes('אוקטובר')) {
+            cycleInfo = 'אוקטובר';
+            cycleTag = '[אוק]';
+          }
+          else if (relevantPart.includes('_דצ_') || relevantPart.includes(' דצ ') ||
+                   relevantPart.includes('דצמבר')) {
+            cycleInfo = 'דצמבר';
+            cycleTag = '[דצ]';
           }
           
-          // זיהוי שנה - חכם וגמיש
+          // 🔴 זיהוי שנה משם הקובץ בלבד, בחלק הרלוונטי!
           let yearInfo = '';
-          
-          // אסטרטגיה 1: שנה מלאה
-          const fullYearMatch = fileName.match(/20\d{2}|19\d{2}/);
-          if (fullYearMatch) {
-            yearInfo = fullYearMatch[0];
+          if (relevantPart.includes('2025')) {
+            yearInfo = '2025';
+          } else if (relevantPart.includes('2026')) {
+            yearInfo = '2026';
           }
-          
-          // אסטרטגיה 2: שנה בן 2 ספרות צמודה לחודש
-          if (!yearInfo && cycleInfo) {
-            const monthShort = cycleTag.replace(/[\[\]]/g, '');
-            const yearPatterns = [
-              new RegExp(`${monthShort}\\s+(\\d{2})(?!\\d)`, 'i'),
-              new RegExp(`${monthShort}_(\\d{2})(?!\\d)`, 'i'),
-              new RegExp(`${monthShort}-(\\d{2})(?!\\d)`, 'i'),
-            ];
-            
-            for (const pattern of yearPatterns) {
-              const match = fileName.match(pattern);
-              if (match && match[1]) {
-                const yearShort = match[1];
-                const yearNum = parseInt(yearShort);
-                if (yearNum > 30) {
-                  yearInfo = '19' + yearShort;
-                } else {
-                  yearInfo = '20' + yearShort;
-                }
-                break;
-              }
-            }
+          // חפש "25" או "26" בצורה בטוחה
+          else if (relevantPart.match(/[\s_-]25[\s_\.]|^25[\s_\.]|[\s_-]25$|^25$/)) {
+            yearInfo = '2025';
+          } else if (relevantPart.match(/[\s_-]26[\s_\.]|^26[\s_\.]|[\s_-]26$|^26$/)) {
+            yearInfo = '2026';
           }
           
           let fullCycleTag = '';
@@ -158,8 +182,7 @@ export async function onRequest(context) {
       }
       
       fullContext += `\n${'='.repeat(100)}\n`;
-      fullContext += `🔴 חשוב מאוד: המחזור זוהה משם הקובץ בלבד (לא מתוך הנתונים!)!\n`;
-      fullContext += `כל שנה זוהה אוטומטית - 2020, 2021, ... 2099, וגם שנות עבר!\n`;
+      fullContext += `🔴 חשוב מאוד: המחזור זוהה משם הקובץ בלבד (לא מתוך הנתונים וגם לא מתוך תאריך ההעלאה!)!\n`;
       fullContext += `לדוגמה: [קרקל][נוב]25 → קרקל בנובמבר 2025\n`;
       fullContext += `${'='.repeat(100)}\n`;
       
@@ -175,7 +198,7 @@ export async function onRequest(context) {
           fullContext += `📅 מחזור: ${info.cycleTag} ${info.cycle}${info.year ? ' ' + info.year : ''}\n`;
         }
         fullContext += `${'#'.repeat(50)}\n`;
-        fullContext += `🔴 זכור: המחזור זוהה משם הקובץ!\n`;
+        fullContext += `🔴 זכור: המחזור זוהה משם הקובץ בלבד (לא מתוך תאריך ההעלאה!)!\n`;
         
         for (const file of info.files) {
           fullContext += `\n📁 קובץ: ${file.name}\n`;
@@ -189,7 +212,7 @@ export async function onRequest(context) {
       fullContext += `\n${'='.repeat(100)}\n`;
       fullContext += `📋 הנחיה קריטית:\n`;
       fullContext += `כשמשתמש שואל על חניך כלשהו, בדוק את התגים שלו - קבוצה ומחזור!\n`;
-      fullContext += `🔴 המחזור משם הקובץ בלבד - כל שנה זוהה אוטומטית!\n`;
+      fullContext += `🔴 המחזור משם הקובץ בלבד - לא משום דבר אחר (לא מתוך תאריך ההעלאה)!\n`;
       fullContext += `אל תערבב חניכים בין קבוצות או בין מחזורים גם אם השמות דומים!\n`;
       fullContext += `${'='.repeat(100)}\n`;
 
@@ -201,7 +224,7 @@ export async function onRequest(context) {
         },
         {
           role: "model",
-          parts: [{ text: "הבנתי את ההנחיות תוך כדי שמירה קפדנית על התגים של הקבוצות והמחזורים. המחזור זוהה משם הקובץ בלבד. כל שנה מ-1900 עד 2099 זוהה אוטומטית. כל חניך כולל תג קבוצה וגם תג מחזור מהשם. אני לא אערבב בינהם ולא אחשוב שחניך של קבוצה או מחזור אחד שייך לקבוצה או מחזור אחר." }]
+          parts: [{ text: "הבנתי את ההנחיות תוך כדי שמירה קפדנית על התגים של הקבוצות והמחזורים. המחזור זוהה משם הקובץ בלבד (לא מתוך הנתונים בתוך הקובץ וגם לא מתוך תאריך ההעלאה). כל חניך כולל תג קבוצה וגם תג מחזור מהשם בלבד. אני לא אערבב בינהם ולא אחשוב שחניך של קבוצה או מחזור אחד שייך לקבוצה או מחזור אחר." }]
         }
       ];
 
@@ -288,68 +311,93 @@ async function handleFileUpload(request, env) {
           groupTag = '[בסיסי]';
         }
         
+        // 🔴 סינון תאריך ההעלאה קודם!
+        let relevantPart = fileName.toLowerCase();
+        
+        // הסר תאריכים בפורמט _DD-MM-YYYY
+        relevantPart = relevantPart.replace(/_\d{2}-\d{2}-\d{4}/, '');
+        relevantPart = relevantPart.replace(/_\d{2}\.\d{2}\.\d{4}/, '');
+        
+        // הסר סיומות קובץ
+        relevantPart = relevantPart.replace(/\.(xlsx|xls|csv|json|txt)$/g, '');
+        
         // זיהוי מחזור משם הקובץ בלבד!
         let cycleInfo = '';
         let cycleTag = '';
-        let monthNum = 0;
         
-        const lowerFileName = fileName.toLowerCase();
-        
-        const monthsMap = [
-          { names: ['_נוב_', ' נוב ', '-נוב-', 'נוב_', '_נוב'], month: 'נובמבר', tag: '[נוב]', num: 11 },
-          { names: ['_מר_', ' מר ', '-מר-', 'מרץ'], month: 'מרץ', tag: '[מר]', num: 3 },
-          { names: ['_יון_', ' יון ', '-יון-', 'יוני'], month: 'יוני', tag: '[יון]', num: 6 },
-          { names: ['_ין_', ' ין ', '-ין-', 'ינואר'], month: 'ינואר', tag: '[ין]', num: 1 },
-          { names: ['_פב_', ' פב ', '-פב-', 'פברואר'], month: 'פברואר', tag: '[פב]', num: 2 },
-          { names: ['_אפ_', ' אפ ', '-אפ-', 'אפריל'], month: 'אפריל', tag: '[אפ]', num: 4 },
-          { names: ['_מאי_', ' מאי ', '-מאי-', '_מאי'], month: 'מאי', tag: '[מאי]', num: 5 },
-          { names: ['_יול_', ' יול ', '-יול-', 'יולי'], month: 'יולי', tag: '[יול]', num: 7 },
-          { names: ['_אוג_', ' אוג ', '-אוג-', 'אוגוסט'], month: 'אוגוסט', tag: '[אוג]', num: 8 },
-          { names: ['_ספ_', ' ספ ', '-ספ-', 'ספטמבר'], month: 'ספטמבר', tag: '[ספ]', num: 9 },
-          { names: ['_אוק_', ' אוק ', '-אוק-', 'אוקטובר'], month: 'אוקטובר', tag: '[אוק]', num: 10 },
-          { names: ['_דצ_', ' דצ ', '-דצ-', 'דצמבר'], month: 'דצמבר', tag: '[דצ]', num: 12 },
-        ];
-        
-        for (const monthPattern of monthsMap) {
-          for (const name of monthPattern.names) {
-            if (lowerFileName.includes(name)) {
-              cycleInfo = monthPattern.month;
-              cycleTag = monthPattern.tag;
-              monthNum = monthPattern.num;
-              break;
-            }
-          }
-          if (cycleInfo) break;
+        if (relevantPart.includes('_נוב_') || relevantPart.includes(' נוב ') || 
+            relevantPart.includes('-נוב-') || relevantPart.includes('נוב_') ||
+            relevantPart.includes('_נוב') || relevantPart.includes('נוב ')) {
+          cycleInfo = 'נובמבר';
+          cycleTag = '[נוב]';
+        }
+        else if (relevantPart.includes('_מר_') || relevantPart.includes(' מר ') ||
+                 relevantPart.includes('-מר-') || relevantPart.includes('מרץ')) {
+          cycleInfo = 'מרץ';
+          cycleTag = '[מר]';
+        }
+        else if (relevantPart.includes('_יון_') || relevantPart.includes(' יון ') ||
+                 relevantPart.includes('-יון-') || relevantPart.includes('יוני')) {
+          cycleInfo = 'יוני';
+          cycleTag = '[יון]';
+        }
+        else if (relevantPart.includes('_ין_') || relevantPart.includes(' ין ') ||
+                 relevantPart.includes('-ין-') || relevantPart.includes('ינואר')) {
+          cycleInfo = 'ינואר';
+          cycleTag = '[ין]';
+        }
+        else if (relevantPart.includes('_פב_') || relevantPart.includes(' פב ') ||
+                 relevantPart.includes('-פב-') || relevantPart.includes('פברואר')) {
+          cycleInfo = 'פברואר';
+          cycleTag = '[פב]';
+        }
+        else if (relevantPart.includes('_אפ_') || relevantPart.includes(' אפ ') ||
+                 relevantPart.includes('-אפ-') || relevantPart.includes('אפריל')) {
+          cycleInfo = 'אפריל';
+          cycleTag = '[אפ]';
+        }
+        else if (relevantPart.includes('_מאי_') || relevantPart.includes(' מאי ')) {
+          cycleInfo = 'מאי';
+          cycleTag = '[מאי]';
+        }
+        else if (relevantPart.includes('_יול_') || relevantPart.includes(' יול ') ||
+                 relevantPart.includes('יולי')) {
+          cycleInfo = 'יולי';
+          cycleTag = '[יול]';
+        }
+        else if (relevantPart.includes('_אוג_') || relevantPart.includes(' אוג ') ||
+                 relevantPart.includes('אוגוסט')) {
+          cycleInfo = 'אוגוסט';
+          cycleTag = '[אוג]';
+        }
+        else if (relevantPart.includes('_ספ_') || relevantPart.includes(' ספ ') ||
+                 relevantPart.includes('ספטמבר')) {
+          cycleInfo = 'ספטמבר';
+          cycleTag = '[ספ]';
+        }
+        else if (relevantPart.includes('_אוק_') || relevantPart.includes(' אוק ') ||
+                 relevantPart.includes('אוקטובר')) {
+          cycleInfo = 'אוקטובר';
+          cycleTag = '[אוק]';
+        }
+        else if (relevantPart.includes('_דצ_') || relevantPart.includes(' דצ ') ||
+                 relevantPart.includes('דצמבר')) {
+          cycleInfo = 'דצמבר';
+          cycleTag = '[דצ]';
         }
         
-        // זיהוי שנה - חכם וגמיש
+        // 🔴 זיהוי שנה משם הקובץ בלבד, בחלק הרלוונטי!
         let yearInfo = '';
-        const fullYearMatch = fileName.match(/20\d{2}|19\d{2}/);
-        if (fullYearMatch) {
-          yearInfo = fullYearMatch[0];
-        }
         
-        if (!yearInfo && cycleInfo) {
-          const monthShort = cycleTag.replace(/[\[\]]/g, '');
-          const yearPatterns = [
-            new RegExp(`${monthShort}\\s+(\\d{2})(?!\\d)`, 'i'),
-            new RegExp(`${monthShort}_(\\d{2})(?!\\d)`, 'i'),
-            new RegExp(`${monthShort}-(\\d{2})(?!\\d)`, 'i'),
-          ];
-          
-          for (const pattern of yearPatterns) {
-            const match = fileName.match(pattern);
-            if (match && match[1]) {
-              const yearShort = match[1];
-              const yearNum = parseInt(yearShort);
-              if (yearNum > 30) {
-                yearInfo = '19' + yearShort;
-              } else {
-                yearInfo = '20' + yearShort;
-              }
-              break;
-            }
-          }
+        if (relevantPart.includes('2025')) {
+          yearInfo = '2025';
+        } else if (relevantPart.includes('2026')) {
+          yearInfo = '2026';
+        }
+        else if (relevantPart.match(/[\s_-]25[\s_\.]|^25[\s_\.]|[\s_-]25$|^25$/)) {
+          yearInfo = '2025';
+        } else if (relevantPart.match(/[\s_-]26[\s_\.]|^26[\s_\.]|[\s_-]26$|^26$/)) {
+          yearInfo = '2026';
         }
         
         let fullCycleTag = '';
@@ -361,6 +409,11 @@ async function handleFileUpload(request, env) {
           fullCycleTag = `[${yearInfo}]`;
         }
         
+        console.log(`✅ שם הקובץ: ${fileName}`);
+        console.log(`✅ חלק רלוונטי: ${relevantPart}`);
+        console.log(`✅ זוהה קבוצה: ${groupTag} ${groupName}`);
+        console.log(`✅ זוהה מחזור: ${fullCycleTag} ${cycleInfo} ${yearInfo}`);
+        
         let excelContent = `📊 **שם הקובץ: ${fileName}**\n`;
         excelContent += `תאריך העלאה: ${new Date().toLocaleString('he-IL')}\n`;
         excelContent += `${'='.repeat(100)}\n\n`;
@@ -368,11 +421,11 @@ async function handleFileUpload(request, env) {
         excelContent += `📌 קבוצה/יחידה: **${groupName}** (תג: ${groupTag})\n`;
         if (cycleInfo || yearInfo) {
           excelContent += `📅 מחזור/תקופה: **${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}** (תג: ${fullCycleTag})\n`;
-          excelContent += `🔢 מספר חודש: ${monthNum}\n`;
+        } else {
+          excelContent += `⚠️ ⚠️ ⚠️ לא זוהה מחזור בשם הקובץ!\n`;
         }
-        excelContent += `✅ כל שנה זוהה אוטומטית!\n`;
         excelContent += `${'='.repeat(100)}\n\n`;
-        excelContent += `✅ זיהוי מחזור וחודש ושנה ממשם הקובץ בלבד (לא מתוך הנתונים!)\n`;
+        excelContent += `✅ זיהוי מחזור ממשם הקובץ בלבד (לא מתוך הנתונים וגם לא מתוך תאריך ההעלאה!)\n`;
         excelContent += `⚠️ חשוב: כל חניך בקבוצה זו יתויג כ-${groupTag}${fullCycleTag}\n`;
         excelContent += `${'='.repeat(100)}\n\n`;
         
@@ -406,6 +459,7 @@ async function handleFileUpload(request, env) {
               dataStartIdx++;
               continue;
             }
+            
             break;
           }
           
@@ -434,8 +488,7 @@ async function handleFileUpload(request, env) {
               excelContent += `  • קבוצה: ${groupName}\n`;
               excelContent += `  • תג קבוצה: ${groupTag}\n`;
               if (cycleInfo || yearInfo) {
-                excelContent += `  • חודש: ${cycleInfo}${monthNum ? ' (' + monthNum + ')' : ''}\n`;
-                excelContent += `  • שנה: ${yearInfo}\n`;
+                excelContent += `  • מחזור: ${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}\n`;
                 excelContent += `  • תג מחזור: ${fullCycleTag} (מתוך שם הקובץ)\n`;
               }
               
@@ -458,10 +511,9 @@ async function handleFileUpload(request, env) {
         excelContent += `• קבוצה: ${groupName}\n`;
         excelContent += `• תג קבוצה להבדלה: ${groupTag}\n`;
         if (cycleInfo || yearInfo) {
-          excelContent += `• חודש: ${cycleInfo}${monthNum ? ' (' + monthNum + ')' : ''}\n`;
-          excelContent += `• שנה: ${yearInfo}\n`;
+          excelContent += `• מחזור/תקופה: ${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}\n`;
           excelContent += `• תג מחזור להבדלה: ${fullCycleTag}\n`;
-          excelContent += `• 🔴 מקור המחזור: שם הקובץ בלבד!\n`;
+          excelContent += `• 🔴 מקור המחזור: שם הקובץ בלבד (לא מתוך הנתונים וגם לא מתוך תאריך ההעלאה!)\n`;
         }
         excelContent += `• מספר גיליונות: ${workbook.SheetNames.length}\n`;
         excelContent += `\n⚠️ חשוב: כל חניך בקובץ זה שייך ל-${groupTag}${fullCycleTag} (${groupName}${cycleInfo ? ' ' + cycleInfo : ''})\n`;
@@ -472,10 +524,8 @@ async function handleFileUpload(request, env) {
         let successMsg = `✅ קובץ Excel נשמר בהצלחה!\n\n📊 סיכום:\n• קבוצה: **${groupName}** (${groupTag})\n• סה"כ חניכים: ${totalStudents}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n`;
         
         if (cycleInfo || yearInfo) {
-          successMsg += `• חודש: **${cycleInfo}**${monthNum ? ' (חודש ' + monthNum + ')' : ''}\n`;
-          successMsg += `• שנה: **${yearInfo}**\n`;
-          successMsg += `• מחזור: **${fullCycleTag}**\n`;
-          successMsg += `• 🔴 המחזור זוהה משם הקובץ בלבד!\n`;
+          successMsg += `• מחזור/תקופה: **${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}** (${fullCycleTag})\n`;
+          successMsg += `• 🔴 המחזור זוהה משם הקובץ בלבד (לא מתאריך ההעלאה)!\n`;
         } else {
           successMsg += `⚠️ ⚠️ לא זוהה מחזור בשם הקובץ!\n`;
         }
