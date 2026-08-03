@@ -96,10 +96,10 @@ export function parseExcelWorkbookGlobal(workbook, fileName, XLSX) {
   else if (cycleInfo) { fullCycleTag = cycleTag; }
   else if (yearInfo) { fullCycleTag = `[${yearInfo}]`; }
 
-  let excelContent = `📊 **שם הקובץ: ${fileName}**\n`;
+  let excelContent = `📊 <b>שם הקובץ: ${fileName}</b>\n`;
   excelContent += `תאריך העלאה: ${new Date().toLocaleString('he-IL')}\n`;
-  if (groupName) excelContent += `📌 קבוצה/יחידה: **${groupName}** (${groupTag})\n`;
-  if (cycleInfo || yearInfo) excelContent += `📅 מחזור/תקופה: **${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}** (${fullCycleTag})\n`;
+  if (groupName) excelContent += `📌 קבוצה/יחידה: <b>${groupName}</b> (${groupTag})\n`;
+  if (cycleInfo || yearInfo) excelContent += `📅 מחזור/תקופה: <b>${cycleInfo}${yearInfo ? ' ' + yearInfo : ''}</b> (${fullCycleTag})\n`;
   excelContent += `${'='.repeat(80)}\n\n`;
 
   let totalRecords = 0;

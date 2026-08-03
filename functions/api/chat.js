@@ -137,13 +137,13 @@ async function handleFileUpload(request, env) {
         const fileKey = `file:${Date.now()}:${fileName}`;
         await kv.put(fileKey, cleanText(result.excelContent), { expirationTtl: 60 * 60 * 24 * 7 });
 
-        let successMsg = `✅ קובץ Excel נשמר ופוענח בהצלחה!\n\n📊 סיכום:\n• שם הקובץ: **${fileName}**\n• סה"כ רשומות: ${result.totalRecords}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n`;
+        let successMsg = `✅ קובץ Excel נשמר ופוענח בהצלחה!\n\n📊 סיכום:\n• שם הקובץ: <b>${fileName}</b>\n• סה"כ רשומות: ${result.totalRecords}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n`;
         
         if (result.groupName) {
-          successMsg += `• קבוצה/יחידה זוהתה: **${result.groupName}** (${result.groupTag})\n`;
+          successMsg += `• קבוצה/יחידה זוהתה: <b>${result.groupName}</b> (${result.groupTag})\n`;
         }
         if (result.cycleInfo || result.yearInfo) {
-          successMsg += `• מחזור/תקופה זוהה: **${result.cycleInfo}${result.yearInfo ? ' ' + result.yearInfo : ''}** (${result.fullCycleTag})\n`;
+          successMsg += `• מחזור/תקופה זוהה: <b>${result.cycleInfo}${result.yearInfo ? ' ' + result.yearInfo : ''}</b> (${result.fullCycleTag})\n`;
         }
         
         successMsg += `\n🏷️ הנתונים פוענחו בפורמט גלובלי ונשמרו במערכת, כעת ניתן לשאול עליהם בכל עת!`;
