@@ -27,7 +27,7 @@ export async function onRequest(context) {
 async function processFile(file, kv) {
   const fileName = file.name;
 
-  if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls')) {
+  if (fileName.endsWith('.xlsx') || fileName.endsWith('.xls') || fileName.endsWith('.xlsm')) {
     try {
       const XLSX = await import('xlsx');
 
