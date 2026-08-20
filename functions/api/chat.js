@@ -1,6 +1,56 @@
 import { systemPrompt } from './prompt.js';
 import { cleanText, parseExcelWorkbookGlobal } from '../_excel.js';
 
+const STOPWORDS = new Set([
+  'את', 'של', 'על', 'עם', 'אני', 'אתה', 'אתם', 'הוא', 'היא', 'אנחנו', 'הם', 'הן',
+  'זה', 'זאת', 'אלה', 'אלו', 'מה', 'מי', 'איך', 'איפה', 'מתי', 'למה', 'כי', 'אבל',
+  'או', 'גם', 'רק', 'כל', 'כמה', 'יש', 'אין', 'היה', 'יהיה', 'לא', 'כן', 'אם', 'אז',
+  'כאשר', 'אחרי', 'לפני', 'תוך', 'בין', 'אל', 'מן', 'עד', 'כדי', 'בגלל', 'תן', 'לי',
+  'בבקשה', 'שלום', 'תודה', 'אפשר', 'רוצה', 'צריך', 'הצג', 'הראה', 'ספר', 'תגיד', 'נא'
+]);
+
+// אותיות יחס נפוצות שמתחברות ישירות למילה בעברית (ב-קרקל, ל-קרקל וכו') -
+// כדי שחיפוש "בקרקל" עדיין ימצא קבצים ששמם "קרקל"
+const HEBREW_PREFIXES = ['ב', 'ל', 'מ', 'ו', 'כ', 'ש'];
+
+// שולף מילות חיפוש משמעותיות מהשאלה של המשתמש, כדי לדעת אילו קבצים רלוונטיים לה
+function extractQueryTerms(text) {
+  if (!text) return [];
+  const words = text
+    .replace(/[^\p{L}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .map(w => w.trim())
+    .filter(w => w.length >= 2 && !STOPWORDS.has(w));
+
+  const terms = new Set(words);
+  for (const w of words) {
+    if (w.length >= 3 && HEBREW_PREFIXES.includes(w[0])) {
+      terms.add(w.slice(1));
+    }
+  }
+  return [...terms];
+}
+
+function countOccurrences(haystack, needle) {
+  let count = 0;
+  let pos = 0;
+  while ((pos = haystack.indexOf(needle, pos)) !== -1) {
+    count++;
+    pos += needle.length;
+  }
+  return count;
+}
+
+// ניקוד קובץ לפי כמות ההתאמות למילות החיפוש - התאמה בשם הקובץ שווה יותר
+function scoreFile(file, terms) {
+  let score = 0;
+  for (const term of terms) {
+    if (file.name.includes(term)) score += 5;
+    score += Math.min(countOccurrences(file.content, term), 20);
+  }
+  return score;
+}
+
 export async function onRequest(context) {
     const { request, env } = context;
     const kv = env.CHAT_KV;
@@ -39,13 +89,29 @@ export async function onRequest(context) {
         }
       }
 
-      // מכסת הטוקנים של Gemini מוגבלת (tier חינמי), אז טוענים קבצים החל מהראשון
+      // בוחרים קודם את הקבצים הרלוונטיים לשאלה האחרונה של המשתמש (במקום לשלוח הכל תמיד),
+      // כדי לחסוך טוקנים ולשפר דיוק. אם לא זוהו מילות חיפוש או שכלום לא התאים - חוזרים
+      // לסדר ההעלאה הרגיל.
+      const lastUserMessage = [...messages].reverse().find(m => m.role === "user")?.content || "";
+      const queryTerms = extractQueryTerms(lastUserMessage);
+
+      let orderedFiles = filesList;
+      if (queryTerms.length) {
+        const matched = filesList
+          .map(file => ({ file, score: scoreFile(file, queryTerms) }))
+          .filter(s => s.score > 0)
+          .sort((a, b) => b.score - a.score)
+          .map(s => s.file);
+        if (matched.length) orderedFiles = matched;
+      }
+
+      // מכסת הטוקנים של Gemini מוגבלת (tier חינמי), אז טוענים קבצים לפי סדר הרלוונטיות
       // עד כמה שנכנס, ומדלגים על השאר במקום לשלוח בקשה שתיכשל
       const MAX_FILE_CONTENT_CHARS = 300000;
       let usedChars = 0;
       const includedFiles = [];
       const skippedFiles = [];
-      for (const file of filesList) {
+      for (const file of orderedFiles) {
         if (usedChars + file.content.length > MAX_FILE_CONTENT_CHARS) {
           skippedFiles.push(file.name);
           continue;
