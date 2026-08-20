@@ -58,6 +58,23 @@ function scoreFile(file, terms) {
   return score;
 }
 
+// כמה הודעות מותר לכתובת IP אחת בחלון של שעה - הגנה מפני ניצול לרעה (וגם מוציא
+// כסף אמיתי מהרגע שעוברים ל-tier בתשלום). המונה נשמר ב-KV עם תפוגה אוטומטית של שעה
+const RATE_LIMIT_PER_HOUR = 30;
+
+async function checkRateLimit(kv, ip) {
+  const hourBucket = new Date().toISOString().slice(0, 13); // e.g. "2026-08-20T11"
+  const key = `ratelimit:${ip}:${hourBucket}`;
+  const current = parseInt((await kv.get(key)) || "0", 10);
+  if (current >= RATE_LIMIT_PER_HOUR) return false;
+  await kv.put(key, String(current + 1), { expirationTtl: 3600 });
+  return true;
+}
+
+// כמה הודעות אחרונות מהשיחה לשלוח ל-Gemini - שיחה ארוכה לא צריכה לגרור מחדש
+// את כל ההיסטוריה בכל תור, זה רק מנפח טוקנים בלי תועלת אמיתית
+const MAX_HISTORY_MESSAGES = 12;
+
 export async function onRequest(context) {
     const { request, env } = context;
     const kv = env.CHAT_KV;
@@ -73,6 +90,12 @@ export async function onRequest(context) {
     }
   
     try {
+      const ip = request.headers.get("CF-Connecting-IP") || "unknown";
+      const allowed = await checkRateLimit(kv, ip);
+      if (!allowed) {
+        return Response.json({ reply: `⏳ הגעת למגבלת ${RATE_LIMIT_PER_HOUR} הודעות לשעה. נסה שוב בעוד כמה דקות.` });
+      }
+
       const { messages } = await request.json();
       const GEMINI_API_KEY = env.GEMINI_API_KEY;
 
@@ -166,7 +189,7 @@ export async function onRequest(context) {
         }
       ];
 
-      messages.forEach(m => {
+      messages.slice(-MAX_HISTORY_MESSAGES).forEach(m => {
         geminiMessages.push({
           role: m.role === "system" ? "user" : m.role,
           parts: [{ text: m.content }]
