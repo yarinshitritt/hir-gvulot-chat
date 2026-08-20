@@ -6,7 +6,8 @@ const STOPWORDS = new Set([
   'זה', 'זאת', 'אלה', 'אלו', 'מה', 'מי', 'איך', 'איפה', 'מתי', 'למה', 'כי', 'אבל',
   'או', 'גם', 'רק', 'כל', 'כמה', 'יש', 'אין', 'היה', 'יהיה', 'לא', 'כן', 'אם', 'אז',
   'כאשר', 'אחרי', 'לפני', 'תוך', 'בין', 'אל', 'מן', 'עד', 'כדי', 'בגלל', 'תן', 'לי',
-  'בבקשה', 'שלום', 'תודה', 'אפשר', 'רוצה', 'צריך', 'הצג', 'הראה', 'ספר', 'תגיד', 'נא'
+  'בבקשה', 'שלום', 'תודה', 'אפשר', 'רוצה', 'צריך', 'הצג', 'הראה', 'ספר', 'תגיד', 'נא',
+  'רשימה', 'נתונים', 'עליהם', 'עליו', 'עליה', 'לך'
 ]);
 
 // אותיות יחס נפוצות שמתחברות ישירות למילה בעברית (ב-קרקל, ל-קרקל וכו') -
@@ -25,7 +26,10 @@ function extractQueryTerms(text) {
   const terms = new Set(words);
   for (const w of words) {
     if (w.length >= 3 && HEBREW_PREFIXES.includes(w[0])) {
-      terms.add(w.slice(1));
+      const stripped = w.slice(1);
+      if (stripped.length >= 2 && !STOPWORDS.has(stripped)) {
+        terms.add(stripped);
+      }
     }
   }
   return [...terms];
@@ -41,12 +45,15 @@ function countOccurrences(haystack, needle) {
   return count;
 }
 
-// ניקוד קובץ לפי כמות ההתאמות למילות החיפוש - התאמה בשם הקובץ שווה יותר
+// ניקוד קובץ לפי כמות ההתאמות למילות החיפוש - התאמה בשם הקובץ היא הסימן החזק ביותר.
+// התאמת תוכן בודדת (מופע אחד) לא סופרת - כדי שקובץ ענק לא ייכנס רק בגלל מילה כללית
+// שהופיעה בו במקרה פעם אחת
 function scoreFile(file, terms) {
   let score = 0;
   for (const term of terms) {
-    if (file.name.includes(term)) score += 5;
-    score += Math.min(countOccurrences(file.content, term), 20);
+    if (file.name.includes(term)) score += 10;
+    const count = countOccurrences(file.content, term);
+    if (count >= 2) score += Math.min(count, 15);
   }
   return score;
 }
