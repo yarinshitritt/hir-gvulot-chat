@@ -40,7 +40,7 @@ async function processFile(file, kv) {
       console.log(`✅ שם הקובץ: ${fileName}`);
       console.log(`✅ סה"כ רשומות שפענחו: ${result.totalRecords}`);
 
-      const fileKey = `file:${crypto.randomUUID()}:${fileName}`;
+      const fileKey = `file:${Date.now()}-${crypto.randomUUID().slice(0, 8)}:${fileName}`;
       await kv.put(fileKey, cleanText(result.excelContent), { expirationTtl: 60 * 60 * 24 * 7 });
 
       let successMsg = `✅ קובץ Excel נשמר ופוענח בהצלחה!\n\n📊 סיכום:\n• שם הקובץ: <b>${fileName}</b>\n• סה"כ רשומות: ${result.totalRecords}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n`;
@@ -60,7 +60,7 @@ async function processFile(file, kv) {
     }
   } else {
     const text = await file.text();
-    await kv.put(`file:${crypto.randomUUID()}:${fileName}`, cleanText(text), { expirationTtl: 60 * 60 * 24 * 7 });
+    await kv.put(`file:${Date.now()}-${crypto.randomUUID().slice(0, 8)}:${fileName}`, cleanText(text), { expirationTtl: 60 * 60 * 24 * 7 });
 
     return `✅ קובץ טקסט ${fileName} נשמר בהצלחה!`;
   }

@@ -26,11 +26,11 @@ export async function onRequest(context) {
       // 1. טעינת הפרומפט הבסיסי
       let fullContext = systemPrompt + "\n\n--- נתונים מהקבצים שהועלו ---\n";
 
-      // 2. משיכת כל הקבצים שהמשתמשים העלו ל-KV
+      // 2. משיכת כל הקבצים שהמשתמשים העלו ל-KV (מהישן לחדש, לפי סדר ההעלאה)
       const list = await kv.list({ prefix: "file:" });
-      
+
       const filesList = [];
-      
+
       for (const key of list.keys) {
         const fileContent = await kv.get(key.name);
         if (fileContent) {
@@ -39,12 +39,33 @@ export async function onRequest(context) {
         }
       }
 
-      fullContext += `\n${'='.repeat(100)}\n`;
-      fullContext += `📌 קבצים ודוחות שהועלו למערכת (סה"כ ${filesList.length} קבצים):\n`;
+      // מכסת הטוקנים של Gemini מוגבלת (tier חינמי), אז טוענים קבצים החל מהראשון
+      // עד כמה שנכנס, ומדלגים על השאר במקום לשלוח בקשה שתיכשל
+      const MAX_FILE_CONTENT_CHARS = 300000;
+      let usedChars = 0;
+      const includedFiles = [];
+      const skippedFiles = [];
       for (const file of filesList) {
+        if (usedChars + file.content.length > MAX_FILE_CONTENT_CHARS) {
+          skippedFiles.push(file.name);
+          continue;
+        }
+        usedChars += file.content.length;
+        includedFiles.push(file);
+      }
+
+      fullContext += `\n${'='.repeat(100)}\n`;
+      fullContext += `📌 קבצים ודוחות שהועלו למערכת (סה"כ ${filesList.length} קבצים, ${includedFiles.length} מתוכם נטענו בשיחה הזו עקב מגבלת גודל):\n`;
+      for (const file of includedFiles) {
         fullContext += `- קובץ: ${file.name}\n`;
       }
-      
+      if (skippedFiles.length) {
+        fullContext += `\n⚠️ הקבצים הבאים לא נטענו בשיחה הזו עקב מגבלת גודל - אם נשאלת עליהם, ציין זאת במפורש:\n`;
+        for (const name of skippedFiles) {
+          fullContext += `- ${name}\n`;
+        }
+      }
+
       fullContext += `\n${'='.repeat(100)}\n`;
       fullContext += `🔴 הנחיות קריאה:\n`;
       fullContext += `קרא את הנתונים הטבלאיים של כל קובץ באופן עצמאי ומדויק בהתאם לעמודות והשורות שפוענחו.\n`;
@@ -53,7 +74,7 @@ export async function onRequest(context) {
       fullContext += `\n📊 הנתונים המלאים מהקבצים:\n`;
       fullContext += `${'='.repeat(100)}\n`;
 
-      for (const file of filesList) {
+      for (const file of includedFiles) {
         fullContext += `\n📄 קובץ: ${file.name}\n`;
         fullContext += file.content;
         fullContext += `\n✓ סיום קובץ ${file.name}\n`;
