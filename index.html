@@ -20,7 +20,7 @@
   <div id="inputBox">
     <button onclick="document.getElementById('fileUpload').click()">+</button>
     <input id="input" placeholder="כתוב הודעה..." style="flex: 1;" />
-    <input type="file" id="fileUpload" accept=".xlsx,.xls" style="display: none;" />
+    <input type="file" id="fileUpload" accept=".xlsx,.xls" multiple style="display: none;" />
     <button onclick="send()">שלח</button>
   </div>
 
@@ -93,14 +93,17 @@
     
     // העלאת קובץ אקסל - שליחת הקובץ המקורי לשרת לצורך עיבוד ופענוח נקי
     document.getElementById('fileUpload').addEventListener('change', async (e) => {
-      const file = e.target.files[0];
-      if (!file) return;
+      const files = Array.from(e.target.files);
+      if (!files.length) return;
 
-      addMessage(`📁 מעלה ומפענח את הקובץ: ${file.name}...`, "user");
+      const namesList = files.map(f => f.name).join(', ');
+      addMessage(files.length === 1
+        ? `📁 מעלה ומפענח את הקובץ: ${namesList}...`
+        : `📁 מעלה ומפענח ${files.length} קבצים: ${namesList}...`, "user");
 
       try {
         const formData = new FormData();
-        formData.append('file', file);
+        files.forEach(file => formData.append('file', file));
 
         const res = await fetch("/api/upload", {
           method: "POST",
@@ -110,10 +113,10 @@
         if (!res.ok) throw new Error(`שגיאה בשרת (${res.status})`);
 
         const resData = await res.json();
-        addMessage(resData.reply || "הקובץ הועלה בהצלחה", "bot");
+        addMessage(resData.reply || "הקבצים הועלו בהצלחה", "bot");
       } catch (err) {
         console.error(err);
-        addMessage(`❌ שגיאה בהעלאת הקובץ: ${err.message}`, "bot");
+        addMessage(`❌ שגיאה בהעלאת הקבצים: ${err.message}`, "bot");
       }
 
       e.target.value = '';
