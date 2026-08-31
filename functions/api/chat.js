@@ -252,7 +252,7 @@ async function handleFileUpload(request, env) {
         const result = parseExcelWorkbookGlobal(workbook, fileName, XLSX);
 
         const fileKey = `file:${Date.now()}:${fileName}`;
-        await kv.put(fileKey, cleanText(result.excelContent), { expirationTtl: 60 * 60 * 24 * 7 });
+        await kv.put(fileKey, cleanText(result.excelContent));
 
         let successMsg = `✅ קובץ Excel נשמר ופוענח בהצלחה!\n\n📊 סיכום:\n• שם הקובץ: <b>${fileName}</b>\n• סה"כ רשומות: ${result.totalRecords}\n• גיליונות: ${workbook.SheetNames.join(', ')}\n`;
         
@@ -273,7 +273,7 @@ async function handleFileUpload(request, env) {
       }
     } else {
       const text = await file.text();
-      await kv.put(`file:${Date.now()}:${fileName}`, cleanText(text), { expirationTtl: 60 * 60 * 24 * 7 });
+      await kv.put(`file:${Date.now()}:${fileName}`, cleanText(text));
 
       return Response.json({ 
         reply: `✅ קובץ טקסט ${fileName} נשמר בהצלחה!` 
