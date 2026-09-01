@@ -1,4 +1,5 @@
 import { cleanText, parseExcelWorkbookGlobal } from '../_excel.js';
+import { extractDocxText } from '../_docx.js';
 
 export async function onRequest(context) {
   const { request, env } = context;
@@ -57,6 +58,24 @@ async function processFile(file, kv) {
     } catch (excelError) {
       console.error("Error parsing Excel:", excelError);
       return `❌ שגיאה בקריאת קובץ Excel <b>${fileName}</b>:\n` + excelError.message;
+    }
+  } else if (fileName.endsWith('.docx')) {
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const text = extractDocxText(arrayBuffer);
+
+      if (!text.trim()) {
+        return `❌ לא נמצא טקסט בקובץ <b>${fileName}</b>`;
+      }
+
+      const fileKey = `file:${Date.now()}-${crypto.randomUUID().slice(0, 8)}:${fileName}`;
+      await kv.put(fileKey, cleanText(text));
+
+      return `✅ קובץ Word נשמר ופוענח בהצלחה!\n\n📊 סיכום:\n• שם הקובץ: <b>${fileName}</b>\n• אורך הטקסט: ${text.length} תווים`;
+
+    } catch (docxError) {
+      console.error("Error parsing docx:", docxError);
+      return `❌ שגיאה בקריאת קובץ Word <b>${fileName}</b>:\n` + docxError.message;
     }
   } else {
     const text = await file.text();
