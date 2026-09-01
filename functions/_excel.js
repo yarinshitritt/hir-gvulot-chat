@@ -65,7 +65,9 @@ export function parseExcelWorkbookGlobal(workbook, fileName, XLSX) {
   if (relevantPart.includes('קרקל')) { groupName = 'קרקל'; groupTag = '[קרקל]'; }
   else if (relevantPart.includes('ברדלס')) { groupName = 'ברדלס'; groupTag = '[ברדלס]'; }
   else if (relevantPart.includes('אריות')) { groupName = 'אריות'; groupTag = '[אריות]'; }
-  else if (relevantPart.includes('פנטרה')) { groupName = 'פנטרה'; groupTag = '[פנטרה]'; }
+  else if (relevantPart.includes('לביא')) { groupName = 'לביא'; groupTag = '[לביא]'; }
+  else if (relevantPart.includes('פנתר')) { groupName = 'פנתר'; groupTag = '[פנתר]'; }
+  else if (relevantPart.includes('יגואר')) { groupName = 'יגואר'; groupTag = '[יגואר]'; }
   else if (relevantPart.includes('מתקדם')) { groupName = 'אימון מתקדם'; groupTag = '[מתקדם]'; }
   else if (relevantPart.includes('בסיסי')) { groupName = 'אימון בסיסי'; groupTag = '[בסיסי]'; }
 
