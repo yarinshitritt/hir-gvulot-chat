@@ -199,9 +199,10 @@ export async function onRequest(context) {
         });
       });
 
-      // 4. שליחה ל-Gemini - עם ניסיון חוזר אוטומטי אם נתקלים במכסת קצב (429),
-      // כי שתי הודעות קרובות זו לזו יכולות ביחד לחרוג מהמכסה לדקה גם אם כל אחת
-      // בנפרד תקינה. גוגל מחזיר בדיוק כמה זמן לחכות (retryDelay).
+      // 4. שליחה ל-Gemini - עם ניסיון חוזר אוטומטי אם נתקלים במכסת קצב (429)
+      // או בעומס זמני בצד גוגל (503/500), כי שתי הודעות קרובות זו לזו יכולות
+      // ביחד לחרוג מהמכסה לדקה גם אם כל אחת בנפרד תקינה, ו-503 חולף כמעט תמיד
+      // תוך שניות בודדות. גוגל מחזיר בדיוק כמה זמן לחכות במקרה 429 (retryDelay).
       const callGemini = () => fetch(
         `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
         {
@@ -219,11 +220,16 @@ export async function onRequest(context) {
 
       let geminiRes = await callGemini();
 
-      if (geminiRes.status === 429) {
+      if (geminiRes.status === 429 || geminiRes.status === 503 || geminiRes.status === 500) {
         const errText = await geminiRes.text();
-        const retryMatch = errText.match(/"retryDelay":\s*"(\d+)s"/);
-        const waitSeconds = Math.min(retryMatch ? parseInt(retryMatch[1], 10) : 15, 20);
-        console.error(`Gemini 429, retrying in ${waitSeconds}s:`, errText);
+        let waitSeconds;
+        if (geminiRes.status === 429) {
+          const retryMatch = errText.match(/"retryDelay":\s*"(\d+)s"/);
+          waitSeconds = Math.min(retryMatch ? parseInt(retryMatch[1], 10) : 15, 20);
+        } else {
+          waitSeconds = 3;
+        }
+        console.error(`Gemini ${geminiRes.status}, retrying in ${waitSeconds}s:`, errText);
         await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000));
         geminiRes = await callGemini();
       }
