@@ -135,9 +135,10 @@ export async function onRequest(context) {
         if (matched.length) orderedFiles = matched;
       }
 
-      // מכסת הטוקנים של Gemini מוגבלת (tier חינמי), אז טוענים קבצים לפי סדר הרלוונטיות
-      // עד כמה שנכנס, ומדלגים על השאר במקום לשלוח בקשה שתיכשל
-      const MAX_FILE_CONTENT_CHARS = 300000;
+      // מכסת הטוקנים של Gemini מוגבלת (tier חינמי) לדקה מתגלגלת, לא להודעה בודדת -
+      // אז גם אם כל הודעה בנפרד תקינה, שתי הודעות גדולות ברצף יכולות ביחד לחרוג.
+      // שומרים על תקציב נמוך מספיק כדי שיישאר מרווח לכמה הודעות רצופות
+      const MAX_FILE_CONTENT_CHARS = 150000;
       let usedChars = 0;
       const includedFiles = [];
       const skippedFiles = [];
