@@ -58,6 +58,51 @@ function scoreFile(file, terms) {
   return score;
 }
 
+// מודל ראשי + מודל גיבוי - לכל מודל אצל גוגל יש מכסה יומית/דקתית נפרדת משלו,
+// אז אם הראשי נתקע (429/503/500) אחרי כל הניסיונות שלו, עוברים לגיבוי לבקשה
+// הזו בלבד. אין צורך ב"חזרה" ידנית למודל הראשי - כל בקשה חדשה מתחילה שוב ממנו,
+// כך שברגע שהמכסה שלו מתפנה הוא חוזר לשמש אוטומטית מעצמו.
+const PRIMARY_MODEL = "gemini-3.1-flash-lite";
+const FALLBACK_MODEL = "gemini-3.5-flash-lite";
+
+async function callGeminiModel(modelName, geminiMessages, apiKey, maxRetries) {
+  const callOnce = () => fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/${modelName}:generateContent?key=${apiKey}`,
+    {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        contents: geminiMessages,
+        generationConfig: {
+          temperature: 0.7,
+          maxOutputTokens: 2000
+        }
+      })
+    }
+  );
+
+  let res = await callOnce();
+  let retriesLeft = maxRetries;
+
+  while (!res.ok && retriesLeft > 0 && (res.status === 429 || res.status === 503 || res.status === 500)) {
+    const errText = await res.text();
+    let waitSeconds;
+    if (res.status === 429) {
+      const retryMatch = errText.match(/"retryDelay":\s*"(\d+)s"/);
+      waitSeconds = Math.min(retryMatch ? parseInt(retryMatch[1], 10) : 15, 20);
+    } else {
+      waitSeconds = 3;
+    }
+    console.error(`Gemini(${modelName}) ${res.status}, retrying in ${waitSeconds}s (${retriesLeft} retries left):`, errText);
+    await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000));
+    res = await callOnce();
+    retriesLeft--;
+    if (res.status === 429) retriesLeft = 0; // ל-429 לא לנסות שוב אחרי ניסיון אחד
+  }
+
+  return res;
+}
+
 // כמה הודעות מותר לכתובת IP אחת בחלון של שעה - הגנה מפני ניצול לרעה (וגם מוציא
 // כסף אמיתי מהרגע שעוברים ל-tier בתשלום). המונה נשמר ב-KV עם תפוגה אוטומטית של שעה
 const RATE_LIMIT_PER_HOUR = 30;
@@ -199,42 +244,14 @@ export async function onRequest(context) {
         });
       });
 
-      // 4. שליחה ל-Gemini - עם ניסיון חוזר אוטומטי אם נתקלים במכסת קצב (429)
-      // או בעומס זמני בצד גוגל (503/500), כי שתי הודעות קרובות זו לזו יכולות
-      // ביחד לחרוג מהמכסה לדקה גם אם כל אחת בנפרד תקינה, ו-503 חולף כמעט תמיד
-      // תוך שניות בודדות. גוגל מחזיר בדיוק כמה זמן לחכות במקרה 429 (retryDelay).
-      const callGemini = () => fetch(
-        `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.1-flash-lite:generateContent?key=${GEMINI_API_KEY}`,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: geminiMessages,
-            generationConfig: {
-              temperature: 0.7,
-              maxOutputTokens: 2000
-            }
-          })
-        }
-      );
+      // 4. שליחה ל-Gemini - קודם למודל הראשי עם ניסיונות חוזרים על 429/503/500,
+      // ואם הוא עדיין נכשל אחרי כל הניסיונות - עובר למודל גיבוי עם מכסה נפרדת
+      // משלו אצל גוגל, לבקשה הזו בלבד (ראו הסבר ליד ההגדרות למעלה).
+      let geminiRes = await callGeminiModel(PRIMARY_MODEL, geminiMessages, GEMINI_API_KEY, 2);
 
-      let geminiRes = await callGemini();
-      let retriesLeft = 2; // 503/500 חולפים מהר אז שווה יותר מניסיון אחד; 429 מקבל רק ניסיון אחד כי ה-retryDelay שלו ארוך יותר
-
-      while (!geminiRes.ok && retriesLeft > 0 && (geminiRes.status === 429 || geminiRes.status === 503 || geminiRes.status === 500)) {
-        const errText = await geminiRes.text();
-        let waitSeconds;
-        if (geminiRes.status === 429) {
-          const retryMatch = errText.match(/"retryDelay":\s*"(\d+)s"/);
-          waitSeconds = Math.min(retryMatch ? parseInt(retryMatch[1], 10) : 15, 20);
-        } else {
-          waitSeconds = 3;
-        }
-        console.error(`Gemini ${geminiRes.status}, retrying in ${waitSeconds}s (${retriesLeft} retries left):`, errText);
-        await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000));
-        geminiRes = await callGemini();
-        retriesLeft--;
-        if (geminiRes.status === 429) retriesLeft = 0; // ל-429 לא לנסות שוב אחרי ניסיון אחד
+      if (!geminiRes.ok) {
+        console.error(`${PRIMARY_MODEL} failed after retries, falling back to ${FALLBACK_MODEL}`);
+        geminiRes = await callGeminiModel(FALLBACK_MODEL, geminiMessages, GEMINI_API_KEY, 1);
       }
 
       if (!geminiRes.ok) {
