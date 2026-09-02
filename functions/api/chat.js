@@ -219,8 +219,9 @@ export async function onRequest(context) {
       );
 
       let geminiRes = await callGemini();
+      let retriesLeft = 2; // 503/500 חולפים מהר אז שווה יותר מניסיון אחד; 429 מקבל רק ניסיון אחד כי ה-retryDelay שלו ארוך יותר
 
-      if (geminiRes.status === 429 || geminiRes.status === 503 || geminiRes.status === 500) {
+      while (!geminiRes.ok && retriesLeft > 0 && (geminiRes.status === 429 || geminiRes.status === 503 || geminiRes.status === 500)) {
         const errText = await geminiRes.text();
         let waitSeconds;
         if (geminiRes.status === 429) {
@@ -229,9 +230,11 @@ export async function onRequest(context) {
         } else {
           waitSeconds = 3;
         }
-        console.error(`Gemini ${geminiRes.status}, retrying in ${waitSeconds}s:`, errText);
+        console.error(`Gemini ${geminiRes.status}, retrying in ${waitSeconds}s (${retriesLeft} retries left):`, errText);
         await new Promise(resolve => setTimeout(resolve, waitSeconds * 1000));
         geminiRes = await callGemini();
+        retriesLeft--;
+        if (geminiRes.status === 429) retriesLeft = 0; // ל-429 לא לנסות שוב אחרי ניסיון אחד
       }
 
       if (!geminiRes.ok) {
