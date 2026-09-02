@@ -123,23 +123,15 @@ export function parseExcelWorkbookGlobal(workbook, fileName, XLSX) {
     excelContent += `• כמות רשומות/שורות: ${validRows.length}\n`;
     excelContent += `• עמודות שנמצאו: ${headers.join(' | ')}\n\n`;
 
+    // פורמט טבלאי קומפקטי: הכותרות הודפסו פעם אחת למעלה, וכל שורה מודפסת כערכים
+    // מופרדים לפי אותו סדר עמודות (תא ריק = מחרוזת ריקה בין המפרידים) - כמו CSV.
+    // זה חוסך המון מקום לעומת חזרה על שם כל עמודה בכל שורה, שמנפח קבצים רחבים
+    // (עשרות עמודות) פי כמה בלי להוסיף מידע.
     validRows.forEach((row, index) => {
-      const rowData = {};
-      headers.forEach((header, colIdx) => {
-        const val = cleanText(row[colIdx]);
-        if (val !== '') {
-          rowData[header] = val;
-        }
-      });
-
-      if (Object.keys(rowData).length > 0) {
-        excelContent += `${groupTag}${fullCycleTag} 📌 שורה ${totalRecords + index + 1}:\n`;
-        Object.entries(rowData).forEach(([colName, colVal]) => {
-          excelContent += `  • ${colName}: ${colVal}\n`;
-        });
-        excelContent += `\n`;
-      }
+      const values = headers.map((_, colIdx) => cleanText(row[colIdx]));
+      excelContent += `${groupTag}${fullCycleTag} שורה ${totalRecords + index + 1}: ${values.join(' | ')}\n`;
     });
+    excelContent += `\n`;
 
     totalRecords += validRows.length;
     excelContent += `${'='.repeat(80)}\n\n`;
