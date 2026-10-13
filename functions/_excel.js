@@ -5,6 +5,29 @@ export function cleanText(val) {
     .trim();
 }
 
+// הדשבורד של Cloudflare מציג רק את 1024 הבייטים הראשונים של כל ערך, ואם החיתוך נופל
+// באמצע אות עברית (2 בייטים) הוא מסמן את כל הערך כ"unprintable characters".
+// רווח אחד נוסף לפני נקודת החיתוך מזיז אותה לגבול תו, בלי לשנות את התוכן.
+const DASHBOARD_PREVIEW_BYTES = 1024;
+export function padForDashboardPreview(text) {
+  const enc = new TextEncoder();
+  let out = text;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    const bytes = enc.encode(out);
+    if (bytes.length <= DASHBOARD_PREVIEW_BYTES || (bytes[DASHBOARD_PREVIEW_BYTES] & 0xC0) !== 0x80) return out;
+    let ws = -1, offset = 0, idx = 0;
+    for (const ch of out) {
+      if (offset >= DASHBOARD_PREVIEW_BYTES) break;
+      if (ch === ' ' || ch === '\n') ws = idx;
+      offset += enc.encode(ch).length;
+      idx += ch.length;
+    }
+    if (ws === -1) return out;
+    out = out.slice(0, ws) + ' ' + out.slice(ws);
+  }
+  return out;
+}
+
 // זיהוי מבני גלובלי של שורת הכותרות - ללא שום מילה קשיחה מוגדרת מראש!
 export function findHeaderRowIndexGlobal(allData) {
   if (!allData || allData.length === 0) return 0;
