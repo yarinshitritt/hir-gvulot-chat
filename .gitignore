@@ -4,3 +4,4 @@ _worker.bundle
 _worker.js
 dist/
 .DS_Store
+.vscode/

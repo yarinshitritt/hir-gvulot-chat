@@ -31,7 +31,6 @@ style.css             styles
 functions/
   api/chat.js         chat endpoint: context selection, Gemini calls, retries, fallback, rate limit
   api/upload.js       file upload + parsing into KV
-  api/view-files.js   lists the stored files
   api/prompt.js       system prompt
   _excel.js           Excel parsing / compact table format
   _docx.js            Word text extraction
